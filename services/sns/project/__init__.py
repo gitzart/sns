@@ -1,6 +1,14 @@
 import os
+import warnings
 
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+
+# ignore psycopg2 binary package `UserWarning`
+warnings.filterwarnings('ignore', module='psycopg2')
+
+db = SQLAlchemy()
 
 
 def create_app(app_config=None):
@@ -10,6 +18,9 @@ def create_app(app_config=None):
     # set config
     app_settings = os.getenv('APP_SETTINGS')
     app.config.from_object(app_settings)
+
+    # set up extensions
+    db.init_app(app)
 
     # register blueprints
     from project.api.app import sns_blueprint
