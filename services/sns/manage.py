@@ -3,6 +3,7 @@ import pytest
 from flask.cli import FlaskGroup
 
 from project import create_app, db
+from project.api.models import User, Post, Photo, Comment
 
 
 cli = FlaskGroup(create_app=create_app)

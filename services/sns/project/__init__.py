@@ -27,5 +27,5 @@ def create_app(app_config=None):
     app.register_blueprint(sns_blueprint)
 
     # shell context for flask cli
-    app.shell_context_processor({'app': app})
+    app.shell_context_processor({'app': app, 'db': db})
     return app
