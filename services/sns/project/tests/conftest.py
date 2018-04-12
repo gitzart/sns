@@ -1,12 +1,11 @@
 import pytest
 
-from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+from project import create_app, db as database
 
 
-@pytest.fixture
+@pytest.fixture(scope='module')
 def app(request):
-    app = Flask(request.module.__name__)
+    app = create_app()
     app.config.from_object('project.config.TestingConfig')
     return app
 
@@ -19,4 +18,7 @@ def client(app):
 
 @pytest.fixture
 def db(app):
-    return SQLAlchemy(app)
+    database.create_all()
+    yield database
+    database.session.remove()
+    database.drop_all()
