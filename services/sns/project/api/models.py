@@ -29,11 +29,25 @@ class Friendship(db.Model):
     )
 
     type = db.Column(db.String, nullable=False)
+
     created = db.Column(db.DateTime)
 
-    left_user = db.relationship('User', foreign_keys=left_user_id)
-    right_user = db.relationship('User', foreign_keys=right_user_id)
-    action_user = db.relationship('User', foreign_keys=action_user_id)
+    left_user = db.relationship(
+        'User',
+        foreign_keys=left_user_id,
+        backref=db.backref('right_users', cascade='all, delete-orphan')
+    )
+
+    right_user = db.relationship(
+        'User',
+        foreign_keys=right_user_id,
+        backref=db.backref('left_users', cascade='all, delete-orphan')
+    )
+
+    action_user = db.relationship(
+        'User',
+        foreign_keys=action_user_id
+    )
 
     def __init__(self, n1, n2, action_user, type, created=None):
         self.left_user = n1
@@ -51,7 +65,17 @@ class Friendship(db.Model):
 
     @classmethod
     def get(cls, n1, n2):
-        """Get mutual relationship ``query``."""
+        """Helper method whose function is different from
+        from SQLAlchemy Query method ``get()``.
+
+        Get mutual instances based on the given composite primary key,
+        together with additional filtering criteria, if given.
+
+        For example, to see if user A and B has blocked each other::
+
+            Friendship.get(A, B).filter_by(type='block'). \
+                count() > 0
+        """
 
         return cls.query.filter(db.or_(
             db.and_(cls.left_user == n1, cls.right_user == n2),
@@ -88,7 +112,9 @@ class Friendship(db.Model):
 
 
 class Follower(db.Model):
-    """Builds following and follower relationships."""
+    """Builds ``uni or bi-directional`` following and follower
+    relationships.
+    """
 
     __tablename__ = 'followers'
 
@@ -107,8 +133,17 @@ class Follower(db.Model):
     expiration = db.Column(db.DateTime)
     created = db.Column(db.DateTime)
 
-    follower = db.relationship('User', foreign_keys=followed_id)
-    followed = db.relationship('User', foreign_keys=follower_id)
+    follower = db.relationship(
+        'User',
+        foreign_keys=follower_id,
+        backref=db.backref('followed_users', cascade='all, delete-orphan')
+    )
+
+    followed = db.relationship(
+        'User',
+        foreign_keys=followed_id,
+        backref=db.backref('follower_users', cascade='all, delete-orphan')
+    )
 
     def __init__(self, follower, followed, expiration=None, create=None):
         self.follower = follower
@@ -124,32 +159,87 @@ class Follower(db.Model):
         )
 
     @classmethod
-    def get(cls, follower, followed):
-        return cls.query.filter(db.and_(
-            cls.follower == follower,
-            cls.followed == followed,
-        ))
+    def get(cls, follower, followed, mutual=False):
+        """Helper method whose function is different from
+        from SQLAlchemy Query method ``get()``.
 
-    @classmethod
-    def build(cls, follower, followed, expiration=None):
-        return cls(follower, followed, expiration)
+        Get a single instance or mutual instances based on
+        the given follower and followed composite primary key,
+        together with additional filtering criteria, if given.
 
-    @classmethod
-    def update(cls, follower, followed, expiration=None, lazy=False):
+        For example, to find an unexpired snoozed relationship
+        of the follower::
+
+            Follower.get(follower, followed). \
+                filter(Follower.expiration > datetime.utcnow()). \
+                first()
+
+        :param mutual: Set it to True to find the relationship
+            from both sides.
         """
+        if mutual:
+            return cls.query.filter(db.or_(
+                db.and_(cls.follower == follower, cls.followed == followed),
+                db.and_(cls.follower == followed, cls.followed == follower)
+            ))
+        else:
+            return cls.query.filter(db.and_(
+                cls.follower == follower,
+                cls.followed == followed,
+            ))
+
+    @classmethod
+    def build(cls, follower, followed, expiration=None, mutual=False):
+        """
+        :param mutual: When True, relationship will be built mutually.
+        """
+        if mutual:
+            return (cls(follower, followed, expiration),
+                    cls(followed, follower, expiration))
+        else:
+            return cls(follower, followed, expiration)
+
+    @classmethod
+    def update(cls, follower, followed, expiration=None,
+               mutual=False, lazy=False):
+        """
+        :param mutual: When True, relationship will be updated mutually.
+
         :param lazy: When True, a new relationship will be built
             if not already existed.
         """
-        rv = cls.query.get((follower.id, followed.id))
+        if mutual:
+            rv = cls.get(follower, followed, mutual=True).all()
+        else:
+            rv = cls.query.get((follower.id, followed.id))
+
         if rv:
+            try:
+                r1, r2 = rv
+            except TypeError:
+                # ignore when parameter ``mutual`` is False
+                # and there is only one relationship
+                pass
+            except ValueError:
+                # raise when parameter ``mutual`` is True
+                e = ('need bi-directional relationship to unpack, '
+                     'but only one exists: %s') % rv[0]
+                raise ValueError(e) from None
+            else:
+                r1.expiration = r2.expiration = expiration
+                return r1, r2
+
+            # quite sure the relationship is one-way
             rv.expiration = expiration
             return rv
+
         if lazy:
-            return cls.build(follower, followed)
+            return cls.build(follower, followed, expiration, mutual)
 
     @classmethod
-    def destroy(cls, follower, followed):
-        return cls.get(follower, followed).delete(synchronize_session=False)
+    def destroy(cls, follower, followed, mutual=False):
+        return cls.get(follower, followed, mutual=mutual). \
+            delete(synchronize_session=False)
 
 
 class User(db.Model):
@@ -177,7 +267,7 @@ class User(db.Model):
         secondaryjoin='User.id == Follower.follower_id',
         lazy='dynamic',
         viewonly=True,
-        backref='followings'
+        backref=db.backref('followings', lazy='dynamic')
     )
 
     posts = db.relationship(
@@ -242,12 +332,12 @@ class User(db.Model):
         )).count() == 2
 
     def is_following(self, n):
-        return Follower.get(self, n).count() > 0
+        return Follower.query.get((self.id, n.id)) is not None
 
     def is_snoozing(self, n):
         return Follower.get(self, n).filter(
-            Follower.expiration is not None
-        ).count() > 0
+            Follower.expiration > datetime.utcnow()
+        ).first() is not None
 
     def suggest(self, n1, n2):
         suggestible = Friendship.get(n1, n2).filter(db.or_(
@@ -285,8 +375,7 @@ class User(db.Model):
             return None
 
         # follow each other
-        Follower.update(self, n, lazy=True)
-        Follower.update(n, self, lazy=True)
+        Follower.update(self, n, mutual=True, lazy=True)
 
         return Friendship.update(self, n, self, 'friend')
 
@@ -296,6 +385,10 @@ class User(db.Model):
 
         if blocked:
             return None
+
+        # stop following each other
+        Follower.destroy(self, n, mutual=True)
+
         # build if not in relationship, otherwise update
         return Friendship.update(self, n, self, 'block', lazy=True)
 
@@ -329,14 +422,21 @@ class User(db.Model):
         return Follower.build(self, n)
 
     def unfollow(self, n):
+        if not self.is_following(n):
+            return None
         return Follower.destroy(self, n)
 
     def snooze(self, n, days=30):
+        if self.is_snoozing(n):
+            return None
+
+        if not self.is_following(n):
+            return None
+
         expiration = datetime.utcnow() + timedelta(days=days)
         return Follower.update(self, n, expiration)
 
     def unsnooze(self, n):
-        if self.is_snoozing(n):
-            return Follower.update(self, n, expiration=None)
-        else:
+        if not self.is_snoozing(n):
             return None
+        return Follower.update(self, n, expiration=None)
