@@ -20,6 +20,7 @@ class TestingConfig(BaseConfig):
     DEBUG = True
     TESTING = True
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_TEST_URL')
+    SQLALCHEMY_ECHO = True
 
 
 class StagingConfig(BaseConfig):
