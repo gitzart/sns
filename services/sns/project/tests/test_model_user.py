@@ -178,18 +178,18 @@ class TestFollowerModel:
 class TestUserModel:
     def test_is_friend(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
-        assert alan.is_friend(karen) is False
+        assert not alan.is_friend(karen)
 
         # make friends
         Friendship.build(alan, karen, alan, 'friend')
         db.session.commit()
 
-        assert alan.is_friend(karen) is True
-        assert karen.is_friend(alan) is True
+        assert alan.is_friend(karen)
+        assert karen.is_friend(alan)
 
     def test_is_mutual_friend(self, db):
         alan, karen, rory = create_users(db, 'alan', 'karen', 'rory')
-        assert alan.is_mutual_firend(karen, rory) is False
+        assert not alan.is_mutual_firend(karen, rory)
 
         # make friends
         Friendship.build(alan, karen, alan, 'friend')
@@ -197,37 +197,37 @@ class TestUserModel:
         Friendship.build(karen, rory, karen, 'friend')
         db.session.commit()
 
-        assert alan.is_mutual_firend(karen, rory) is True
-        assert karen.is_mutual_firend(alan, rory) is True
+        assert alan.is_mutual_firend(karen, rory)
+        assert karen.is_mutual_firend(alan, rory)
 
     def test_is_following(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
-        assert alan.is_following(karen) is False
+        assert not alan.is_following(karen)
 
         # alan follows karen
         Follower.build(alan, karen)
         db.session.commit()
 
-        assert alan.is_following(karen) is True
-        assert karen.is_following(alan) is False
+        assert alan.is_following(karen)
+        assert not karen.is_following(alan)
 
     def test_is_snoozing(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
-        assert alan.is_snoozing(karen) is False
+        assert not alan.is_snoozing(karen)
 
         # start snoozing
         Follower.build(alan, karen, expiration=set_expiration(30))
         db.session.commit()
 
-        assert alan.is_following(karen) is True
-        assert alan.is_snoozing(karen) is True
-        assert karen.is_snoozing(alan) is False
+        assert alan.is_following(karen)
+        assert alan.is_snoozing(karen)
+        assert not karen.is_snoozing(alan)
 
         # snoozing expired
         Follower.update(alan, karen, expiration=set_expiration())
         db.session.commit()
 
-        assert alan.is_snoozing(karen) is False
+        assert not alan.is_snoozing(karen)
 
     def test_suggest(self, db):
         alan, karen, rory = create_users(db, 'alan', 'karen', 'rory')
@@ -244,7 +244,7 @@ class TestUserModel:
         db.session.commit()
 
         # karen can suggest alan and rory as they are not friends yet
-        assert karen.is_mutual_firend(alan, rory) is True
+        assert karen.is_mutual_firend(alan, rory)
         r1, r2 = karen.suggest(alan, rory)
         db.session.commit()
 
@@ -282,7 +282,7 @@ class TestUserModel:
         # alan cannot accept the request he made
         assert alan.accept(karen) is None
         db.session.commit()
-        assert karen.is_friend(alan) is False
+        assert not karen.is_friend(alan)
 
         # requests accepted
         karen.accept(alan)
@@ -290,8 +290,8 @@ class TestUserModel:
         db.session.commit()
 
         assert alan.friends.count() == 2
-        assert karen.is_friend(alan) is True
-        assert rory.is_friend(alan) is True
+        assert karen.is_friend(alan)
+        assert rory.is_friend(alan)
 
     def test_follow_on_accept(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
@@ -304,8 +304,8 @@ class TestUserModel:
 
         # when request accepted, users become followers
         # to each other
-        assert karen.is_following(alan) is True
-        assert alan.is_following(karen) is True
+        assert karen.is_following(alan)
+        assert alan.is_following(karen)
 
     def test_block(self, db):
         alan, karen, rory = create_users(db, 'alan', 'karen', 'rory')
@@ -344,7 +344,7 @@ class TestUserModel:
         db.session.commit()
         karen.accept(alan)
         db.session.commit()
-        assert karen.is_friend(alan) is True
+        assert karen.is_friend(alan)
 
         # alan unfriends karen
         assert alan.unfriend(karen) is not None
@@ -404,11 +404,11 @@ class TestUserModel:
 
         alan.follow(karen)
         db.session.commit()
-        assert alan.is_following(karen) is True
+        assert alan.is_following(karen)
 
         alan.unfollow(karen)
         db.session.commit()
-        assert alan.is_following(karen) is False
+        assert not alan.is_following(karen)
 
     def test_snooze(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
@@ -420,7 +420,7 @@ class TestUserModel:
         db.session.commit()
         alan.snooze(karen)
         db.session.commit()
-        assert alan.is_snoozing(karen) is True
+        assert alan.is_snoozing(karen)
 
         # alan has already snoozed karen
         assert alan.snooze(karen) is None
@@ -435,12 +435,12 @@ class TestUserModel:
         db.session.commit()
         alan.snooze(karen)
         db.session.commit()
-        assert alan.is_snoozing(karen) is True
+        assert alan.is_snoozing(karen)
 
         assert alan.unsnooze(karen) is not None
         db.session.commit()
 
         # now, alan is not snoozing
-        assert alan.is_snoozing(karen) is False
+        assert not alan.is_snoozing(karen)
         # but still following
-        assert alan.is_following(karen) is True
+        assert alan.is_following(karen)
