@@ -2,7 +2,7 @@ import pytest
 
 from datetime import datetime, timedelta
 
-from ..api.models import User, Friendship, Follower
+from ..api.models.user import User, Friendship, Follower
 
 
 def create_users(db, *names):

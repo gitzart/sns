@@ -247,6 +247,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
+    gender = db.Column(db.String, nullable=False)
     created = db.Column(db.DateTime)
 
     # read-only generic friendship query
@@ -284,8 +285,9 @@ class User(db.Model):
         back_populates='author'
     )
 
-    def __init__(self, name):
+    def __init__(self, name, gender=None):
         self.name = name
+        self.gender = gender or Gender.male
         self.created = datetime.utcnow()
 
     def __repr__(self):

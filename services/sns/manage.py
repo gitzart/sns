@@ -5,16 +5,12 @@ import pytest
 from flask.cli import FlaskGroup
 
 from project import create_app, db
-from project.api.models import User, Post, Photo, Comment
+from project.api.models import *
 
 
 cov = coverage.Coverage(
     branch=True,
-    include='project/*',
-    omit=[
-        'project/tests/*',
-        'project/config.py',
-    ]
+    include='project/api/*',
 )
 cov.start()
 
