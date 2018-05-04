@@ -1,6 +1,13 @@
 from datetime import datetime, timedelta
 
 from project import db
+from .enums import to_sa_enum, FriendshipType, Gender
+
+
+SAFriendshipType = to_sa_enum(FriendshipType)
+SAGender = to_sa_enum(Gender)
+
+FRIENDED, PENDING, BLOCKED, SUGGESTED = FriendshipType.__members__.values()
 
 
 class Friendship(db.Model):
@@ -28,7 +35,7 @@ class Friendship(db.Model):
         nullable=False
     )
 
-    type = db.Column(db.String, nullable=False)
+    type = db.Column(SAFriendshipType, nullable=False)
 
     created = db.Column(db.DateTime)
 
@@ -247,7 +254,7 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String, nullable=False)
-    gender = db.Column(db.String, nullable=False)
+    gender = db.Column(SAGender, nullable=False)
     created = db.Column(db.DateTime)
 
     # read-only generic friendship query
@@ -285,9 +292,9 @@ class User(db.Model):
         back_populates='author'
     )
 
-    def __init__(self, name, gender=None):
+    def __init__(self, name, gender):
         self.name = name
-        self.gender = gender or Gender.male
+        self.gender = gender
         self.created = datetime.utcnow()
 
     def __repr__(self):
@@ -298,14 +305,14 @@ class User(db.Model):
 
     @property
     def friends(self):
-        return self.friendship.filter(Friendship.type == 'friend')
+        return self.friendship.filter(Friendship.type == FRIENDED)
 
     @staticmethod
     def mutual_friends(n1, n2):
         def criteria(arg):
             return db.and_(
                 Friendship.left_user == arg,
-                Friendship.type == 'friend'
+                Friendship.type == FRIENDED
             )
 
         mutual_table = (
@@ -321,12 +328,12 @@ class User(db.Model):
 
     def is_friend(self, n):
         return Friendship.get(self, n).filter_by(
-            type='friend').count() > 0
+            type=FRIENDED).count() > 0
 
     def is_mutual_firend(self, n1, n2):
         return Friendship.query.filter(db.and_(
             Friendship.left_user == self,
-            Friendship.type == 'friend',
+            Friendship.type == FRIENDED,
             db.or_(
                 Friendship.right_user == n1,
                 Friendship.right_user == n2
@@ -343,33 +350,33 @@ class User(db.Model):
 
     def suggest(self, n1, n2):
         suggestible = Friendship.get(n1, n2).filter(db.or_(
-            Friendship.type == 'suggest',
-            Friendship.type == 'pending',
-            Friendship.type == 'friend',
-            Friendship.type == 'block',
+            Friendship.type == SUGGESTED,
+            Friendship.type == PENDING,
+            Friendship.type == FRIENDED,
+            Friendship.type == BLOCKED,
         )).count() == 0
 
         if suggestible and self.is_mutual_firend(n1, n2):
-            return Friendship.build(n1, n2, self, 'suggest')
+            return Friendship.build(n1, n2, self, SUGGESTED)
         else:
             return None
 
     def make_friends(self, n):
         in_relationship = Friendship.get(self, n).filter(db.or_(
-            Friendship.type == 'pending',
-            Friendship.type == 'friend',
-            Friendship.type == 'block',
+            Friendship.type == PENDING,
+            Friendship.type == FRIENDED,
+            Friendship.type == BLOCKED,
         )).count() > 0
 
         if in_relationship:
             return None
         # update if friend suggestion exists, otherwise build
-        return Friendship.update(self, n, self, 'pending', lazy=True)
+        return Friendship.update(self, n, self, PENDING, lazy=True)
 
     def accept(self, n):
         # the same user cannot make friend request and accept
         pending = Friendship.get(self, n).filter(db.and_(
-            Friendship.type == 'pending',
+            Friendship.type == PENDING,
             Friendship.action_user != self
         )).count() > 0
 
@@ -379,11 +386,11 @@ class User(db.Model):
         # follow each other
         Follower.update(self, n, mutual=True, lazy=True)
 
-        return Friendship.update(self, n, self, 'friend')
+        return Friendship.update(self, n, self, FRIENDED)
 
     def block(self, n):
         blocked = Friendship.get(self, n).filter_by(
-            type='block').count() > 0
+            type=BLOCKED).count() > 0
 
         if blocked:
             return None
@@ -392,12 +399,12 @@ class User(db.Model):
         Follower.destroy(self, n, mutual=True)
 
         # build if not in relationship, otherwise update
-        return Friendship.update(self, n, self, 'block', lazy=True)
+        return Friendship.update(self, n, self, BLOCKED, lazy=True)
 
     def unblock(self, n):
         # only the user who blocked can unblock
         blocked = Friendship.get(self, n).filter(
-            Friendship.type == 'block',
+            Friendship.type == BLOCKED,
             Friendship.action_user == self
         ).count() > 0
 
@@ -412,7 +419,7 @@ class User(db.Model):
 
     def decline(self, n):
         pending = Friendship.get(self, n).filter_by(
-            type='pending').count() > 0
+            type=PENDING).count() > 0
 
         if not pending:
             return None

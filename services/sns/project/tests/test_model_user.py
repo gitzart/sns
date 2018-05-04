@@ -3,12 +3,16 @@ import pytest
 from datetime import datetime, timedelta
 
 from ..api.models.user import User, Friendship, Follower
+from ..api.models.enums import FriendshipType, Gender
+
+
+FRIENDED, PENDING, BLOCKED, SUGGESTED = FriendshipType.__members__.values()
 
 
 def create_users(db, *names):
     users = []
     for name in names:
-        users.append(User(name))
+        users.append(User(name, Gender.OTHERS))
     db.session.add_all(users)
     db.session.commit()
     return users
@@ -22,7 +26,7 @@ class TestFriendshipModel:
     def test_build_friendship(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
 
-        r1, r2 = Friendship.build(alan, karen, alan, 'friend')
+        r1, r2 = Friendship.build(alan, karen, alan, FRIENDED)
         db.session.commit()
 
         r1, r2 = Friendship.get(alan, karen).all()
@@ -31,34 +35,34 @@ class TestFriendshipModel:
         assert r1.left_user == alan
         assert r1.right_user == karen
         assert r1.action_user == alan
-        assert r1.type == 'friend'
+        assert r1.type == FRIENDED
 
         # karen => alan
         assert r2.left_user == karen
         assert r2.right_user == alan
         assert r2.action_user == alan
-        assert r2.type == 'friend'
+        assert r2.type == FRIENDED
 
     def test_update_friendship(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
 
-        r1, r2 = Friendship.build(alan, karen, alan, 'friend')
+        r1, r2 = Friendship.build(alan, karen, alan, FRIENDED)
         db.session.commit()
 
-        r1, r2 = Friendship.update(alan, karen, alan, 'block')
+        r1, r2 = Friendship.update(alan, karen, alan, BLOCKED)
         db.session.commit()
 
         for rv in Friendship.get(alan, karen).all():
-            assert rv.type == 'block'
+            assert rv.type == BLOCKED
 
     def test_update_friendship_lazy(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
 
-        r1, r2 = Friendship.update(alan, karen, alan, 'block', lazy=True)
+        r1, r2 = Friendship.update(alan, karen, alan, BLOCKED, lazy=True)
         db.session.commit()
 
         for rv in Friendship.get(alan, karen).all():
-            assert rv.type == 'block'
+            assert rv.type == BLOCKED
 
     def test_destroy_friendship(self, db):
         alan, karen = create_users(db, 'alan', 'karen')
@@ -66,7 +70,7 @@ class TestFriendshipModel:
         assert Friendship.destroy(alan, karen) == 0
         db.session.commit()
 
-        r1, r2 = Friendship.build(alan, karen, alan, 'friend')
+        r1, r2 = Friendship.build(alan, karen, alan, FRIENDED)
         db.session.commit()
 
         Friendship.destroy(alan, karen)
@@ -96,10 +100,7 @@ class TestFollowerModel:
         assert rv.followed == alan
 
     def test_build_follower_mutual(self, db):
-        alan = User('alan')
-        karen = User('karen')
-        db.session.add_all([alan, karen])
-        db.session.commit()
+        alan, karen = create_users(db, 'alan', 'karen')
 
         # follow mutually
         r1, r2 = Follower.build(alan, karen, mutual=True)
@@ -181,7 +182,7 @@ class TestUserModel:
         assert not alan.is_friend(karen)
 
         # make friends
-        Friendship.build(alan, karen, alan, 'friend')
+        Friendship.build(alan, karen, alan, FRIENDED)
         db.session.commit()
 
         assert alan.is_friend(karen)
@@ -192,9 +193,9 @@ class TestUserModel:
         assert not alan.is_mutual_firend(karen, rory)
 
         # make friends
-        Friendship.build(alan, karen, alan, 'friend')
-        Friendship.build(alan, rory, alan, 'friend')
-        Friendship.build(karen, rory, karen, 'friend')
+        Friendship.build(alan, karen, alan, FRIENDED)
+        Friendship.build(alan, rory, alan, FRIENDED)
+        Friendship.build(karen, rory, karen, FRIENDED)
         db.session.commit()
 
         assert alan.is_mutual_firend(karen, rory)
@@ -238,9 +239,9 @@ class TestUserModel:
         assert Friendship.get(alan, rory).count() == 0
 
         # alan friended karen
-        Friendship.build(alan, karen, alan, 'friend')
+        Friendship.build(alan, karen, alan, FRIENDED)
         # rory friended karen
-        Friendship.build(rory, karen, rory, 'friend')
+        Friendship.build(rory, karen, rory, FRIENDED)
         db.session.commit()
 
         # karen can suggest alan and rory as they are not friends yet
@@ -266,7 +267,7 @@ class TestUserModel:
         # request is pending, cannot be sent again
         assert alan.make_friends(karen) is None
 
-        rv = Friendship.get(alan, karen).filter_by(type='pending').first()
+        rv = Friendship.get(alan, karen).filter_by(type=PENDING).first()
         assert rv.action_user == alan
         assert rv.left_user == alan
         assert rv.right_user == karen
