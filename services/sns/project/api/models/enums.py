@@ -1,30 +1,85 @@
 from enum import Enum
 
-from project import db
-from project.utils import to_snake_case
-
-
-def to_sa_enum(py_enum):
-    """Convert Python enumeration into SQLAlchemy enumeration."""
-    return db.Enum(
-        py_enum,
-        name=to_snake_case(py_enum.__name__),
-        values_callable=lambda x: [e.value for e in x],
-    )
-
 
 class FriendshipType(Enum):
     """Status of the friendship between two users."""
 
+    BLOCKED = 'blocked'
     FRIENDED = 'friended'
     PENDING = 'pending'
-    BLOCKED = 'blocked'
     SUGGESTED = 'suggested'
+
+    def describe(self):
+        d = {
+            'blocked': (
+                'The relationship is blocked; '
+                'the users cannot communicate each other.'
+            ),
+            'friended': (
+                'The users are friends.'
+            ),
+            'pending': (
+                'The friend request is pending.'
+            ),
+            'suggested': (
+                'The friend suggestion is made by '
+                'a mutual friend of both users.'
+            ),
+        }
+        return d[self.value]
 
 
 class Gender(Enum):
     """Gender of the user."""
 
-    MALE = 'male'
     FEMALE = 'female'
+    MALE = 'male'
     OTHERS = 'others'
+
+    def describe(self):
+        d = {
+            'female': 'The user is a she.',
+            'male': 'The user is a he.',
+            'others': 'The user is anything: human, animal, plant and etc.',
+        }
+        return d[self.value]
+
+
+class Reaction(Enum):
+    """Raction of the user to posts and comments."""
+
+    ANGRY = 'angry'
+    LAUGH = 'laugh'
+    LIKE = 'like'
+    LOVE = 'love'
+    SAD = 'sad'
+    WOW = 'wow'
+
+    def describe(self):
+        d = {
+            'angry': 'Represents the 😡 emoji.',
+            'laugh': 'Represents the 😂 emoji.',
+            'like': 'Represents the 👍 emoji.',
+            'love': 'Represents the ❤️ emoji.',
+            'sad': 'Represents the 😢 emoji.',
+            'wow': 'Represents the 😯 emoji.',
+        }
+        return d[self.value]
+
+
+class RelationshipStatus(Enum):
+    """Status of the romantic relationship of the user."""
+
+    CIVIL_UNION = 'civil union'
+    COMPLICATED = 'complicated'
+    DIVORCED = 'divorced'
+    DOMESTIC_PARTNERSHIP = 'domestic partnership'
+    MARRIED = 'married'
+    OPEN_RELATIONSHIP = 'open relationship'
+    SEPARATED = 'separated'
+    SINGLE = 'single'
+    TAKEN = 'taken'
+    WIDOWED = 'widowed'
+
+    def describe(self):
+        return self.value
