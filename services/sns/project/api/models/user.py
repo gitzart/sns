@@ -1,13 +1,15 @@
 from datetime import datetime, timedelta
 
 from project import db
-from .enums import to_sa_enum, FriendshipType, Gender
+from project.utils import to_sa_enum
+from .enums import FriendshipState, Gender
 
 
-SAFriendshipType = to_sa_enum(FriendshipType)
+SAFriendshipState = to_sa_enum(FriendshipState)
 SAGender = to_sa_enum(Gender)
 
-FRIENDED, PENDING, BLOCKED, SUGGESTED = FriendshipType.__members__.values()
+
+ACCEPTED, BLOCKED, PENDING, SUGGESTED = FriendshipState.__members__.values()
 
 
 class Friendship(db.Model):
@@ -35,7 +37,7 @@ class Friendship(db.Model):
         nullable=False
     )
 
-    type = db.Column(SAFriendshipType, nullable=False)
+    state = db.Column(SAFriendshipState, nullable=False)
 
     created = db.Column(db.DateTime)
 
@@ -56,11 +58,11 @@ class Friendship(db.Model):
         foreign_keys=action_user_id
     )
 
-    def __init__(self, n1, n2, action_user, type, created=None):
+    def __init__(self, n1, n2, action_user, state, created=None):
         self.left_user = n1
         self.right_user = n2
         self.action_user = action_user
-        self.type = type
+        self.state = state
         self.created = created or datetime.utcnow()
 
     def __repr__(self):
@@ -90,13 +92,13 @@ class Friendship(db.Model):
         ))
 
     @classmethod
-    def build(cls, n1, n2, action_user, type):
+    def build(cls, n1, n2, action_user, state):
         created = datetime.utcnow()
-        return (cls(n1, n2, action_user, type, created),
-                cls(n2, n1, action_user, type, created))
+        return (cls(n1, n2, action_user, state, created),
+                cls(n2, n1, action_user, state, created))
 
     @classmethod
-    def update(cls, n1, n2, action_user, type, lazy=False):
+    def update(cls, n1, n2, action_user, state, lazy=False):
         """
         :param lazy: When True, a new relationship will be built
             if not already existed.
@@ -107,11 +109,11 @@ class Friendship(db.Model):
             r1, r2 = rv
             r1.created = r2.created = datetime.utcnow()
             r1.action_user = r2.action_user = action_user
-            r1.type = r2.type = type
+            r1.state = r2.state = state
             return r1, r2
 
         if lazy:
-            return cls.build(n1, n2, action_user, type)
+            return cls.build(n1, n2, action_user, state)
 
     @classmethod
     def destroy(cls, n1, n2):
@@ -305,14 +307,14 @@ class User(db.Model):
 
     @property
     def friends(self):
-        return self.friendship.filter(Friendship.type == FRIENDED)
+        return self.friendship.filter(Friendship.state == ACCEPTED)
 
     @staticmethod
     def mutual_friends(n1, n2):
         def criteria(arg):
             return db.and_(
                 Friendship.left_user == arg,
-                Friendship.type == FRIENDED
+                Friendship.state == ACCEPTED
             )
 
         mutual_table = (
@@ -327,13 +329,12 @@ class User(db.Model):
         return User.query.join(mutual_table, User.id == mutual_table.c.id)
 
     def is_friend(self, n):
-        return Friendship.get(self, n).filter_by(
-            type=FRIENDED).count() > 0
+        return Friendship.get(self, n).filter_by(state=ACCEPTED).count() > 0
 
     def is_mutual_firend(self, n1, n2):
         return Friendship.query.filter(db.and_(
             Friendship.left_user == self,
-            Friendship.type == FRIENDED,
+            Friendship.state == ACCEPTED,
             db.or_(
                 Friendship.right_user == n1,
                 Friendship.right_user == n2
@@ -350,10 +351,10 @@ class User(db.Model):
 
     def suggest(self, n1, n2):
         suggestible = Friendship.get(n1, n2).filter(db.or_(
-            Friendship.type == SUGGESTED,
-            Friendship.type == PENDING,
-            Friendship.type == FRIENDED,
-            Friendship.type == BLOCKED,
+            Friendship.state == ACCEPTED,
+            Friendship.state == BLOCKED,
+            Friendship.state == PENDING,
+            Friendship.state == SUGGESTED,
         )).count() == 0
 
         if suggestible and self.is_mutual_firend(n1, n2):
@@ -363,9 +364,9 @@ class User(db.Model):
 
     def make_friends(self, n):
         in_relationship = Friendship.get(self, n).filter(db.or_(
-            Friendship.type == PENDING,
-            Friendship.type == FRIENDED,
-            Friendship.type == BLOCKED,
+            Friendship.state == ACCEPTED,
+            Friendship.state == BLOCKED,
+            Friendship.state == PENDING,
         )).count() > 0
 
         if in_relationship:
@@ -376,7 +377,7 @@ class User(db.Model):
     def accept(self, n):
         # the same user cannot make friend request and accept
         pending = Friendship.get(self, n).filter(db.and_(
-            Friendship.type == PENDING,
+            Friendship.state == PENDING,
             Friendship.action_user != self
         )).count() > 0
 
@@ -386,11 +387,10 @@ class User(db.Model):
         # follow each other
         Follower.update(self, n, mutual=True, lazy=True)
 
-        return Friendship.update(self, n, self, FRIENDED)
+        return Friendship.update(self, n, self, ACCEPTED)
 
     def block(self, n):
-        blocked = Friendship.get(self, n).filter_by(
-            type=BLOCKED).count() > 0
+        blocked = Friendship.get(self, n).filter_by(state=BLOCKED).count() > 0
 
         if blocked:
             return None
@@ -404,7 +404,7 @@ class User(db.Model):
     def unblock(self, n):
         # only the user who blocked can unblock
         blocked = Friendship.get(self, n).filter(
-            Friendship.type == BLOCKED,
+            Friendship.state == BLOCKED,
             Friendship.action_user == self
         ).count() > 0
 
@@ -418,8 +418,7 @@ class User(db.Model):
         return Friendship.destroy(self, n)
 
     def decline(self, n):
-        pending = Friendship.get(self, n).filter_by(
-            type=PENDING).count() > 0
+        pending = Friendship.get(self, n).filter_by(state=PENDING).count() > 0
 
         if not pending:
             return None

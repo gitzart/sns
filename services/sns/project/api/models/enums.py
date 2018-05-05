@@ -1,36 +1,27 @@
 from enum import Enum
 
 
-class FriendshipType(Enum):
-    """Status of the friendship between two users."""
+class FriendshipState(Enum):
+    """State of the user's friendship towards another users."""
 
+    ACCEPTED = 'accepted'
     BLOCKED = 'blocked'
-    FRIENDED = 'friended'
     PENDING = 'pending'
     SUGGESTED = 'suggested'
 
     def describe(self):
         d = {
-            'blocked': (
-                'The relationship is blocked; '
-                'the users cannot communicate each other.'
-            ),
-            'friended': (
-                'The users are friends.'
-            ),
-            'pending': (
-                'The friend request is pending.'
-            ),
-            'suggested': (
-                'The friend suggestion is made by '
-                'a mutual friend of both users.'
-            ),
+            'accepted': 'The user has become a friend of another users.',
+            'blocked': 'The user has blocked another users.',
+            'pending': "The user's friend request is pending.",
+            'suggested':
+                "A friend of the user's has made a friend suggestion.",
         }
         return d[self.value]
 
 
 class Gender(Enum):
-    """Gender of the user."""
+    """The user's gender."""
 
     FEMALE = 'female'
     MALE = 'male'
@@ -45,8 +36,26 @@ class Gender(Enum):
         return d[self.value]
 
 
+class MaritalStatus(Enum):
+    """Status of the user's romantic relationship."""
+
+    CIVIL_UNION = 'civil union'
+    COMPLICATED = 'complicated'
+    DIVORCED = 'divorced'
+    DOMESTIC_PARTNERSHIP = 'domestic partnership'
+    MARRIED = 'married'
+    OPEN_RELATIONSHIP = 'open relationship'
+    SEPARATED = 'separated'
+    SINGLE = 'single'
+    TAKEN = 'taken'
+    WIDOWED = 'widowed'
+
+    def describe(self):
+        return self.value
+
+
 class Reaction(Enum):
-    """Raction of the user to posts and comments."""
+    """The user's reaction to Posts and Comments."""
 
     ANGRY = 'angry'
     LAUGH = 'laugh'
@@ -65,21 +74,3 @@ class Reaction(Enum):
             'wow': 'Represents the 😯 emoji.',
         }
         return d[self.value]
-
-
-class RelationshipStatus(Enum):
-    """Status of the romantic relationship of the user."""
-
-    CIVIL_UNION = 'civil union'
-    COMPLICATED = 'complicated'
-    DIVORCED = 'divorced'
-    DOMESTIC_PARTNERSHIP = 'domestic partnership'
-    MARRIED = 'married'
-    OPEN_RELATIONSHIP = 'open relationship'
-    SEPARATED = 'separated'
-    SINGLE = 'single'
-    TAKEN = 'taken'
-    WIDOWED = 'widowed'
-
-    def describe(self):
-        return self.value
