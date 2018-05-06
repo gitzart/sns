@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 
 from project import db
 from project.utils import to_sa_enum
-from .enums import FriendshipState, Gender
+from .enums import FriendshipState, Gender, MaritalStatus
 
 
 SAFriendshipState = to_sa_enum(FriendshipState)
 SAGender = to_sa_enum(Gender)
+SAMaritalStatus = to_sa_enum(MaritalStatus)
 
 
 ACCEPTED, BLOCKED, PENDING, SUGGESTED = FriendshipState.__members__.values()
@@ -255,9 +256,17 @@ class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String, nullable=False)
+    first_name = db.Column(db.String, nullable=False)
+    last_name = db.Column(db.String, nullable=False)
+    email = db.Column(db.String, nullable=False, unique=True)
+    password = db.Column(db.String, nullable=False)
     gender = db.Column(SAGender, nullable=False)
+    username = db.Column(db.String, unique=True)
     created = db.Column(db.DateTime)
+    birthday = db.Column(db.Date)
+    bio = db.Column(db.String)
+    current_city = db.Column(db.String)
+    marital_status = db.Column(SAMaritalStatus)
 
     # read-only generic friendship query
     friendship = db.relationship(
@@ -292,6 +301,35 @@ class User(db.Model):
         lazy='dynamic',
         cascade='all, delete-orphan',
         back_populates='author'
+    )
+
+    photos = db.relationship(
+        'Photo',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='owner'
+    )
+
+    post_reactions = db.relationship(
+        'PostReaction',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='actor'
+    )
+
+    comment_reactions = db.relationship(
+        'CommentReaction',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='actor'
+    )
+
+    # photo albums the user contributes to
+    associated_albums = db.relationship(
+        'PhotoAlbumContribution',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='contributor'
     )
 
     def __init__(self, name, gender):
