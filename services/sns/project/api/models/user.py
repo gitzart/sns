@@ -303,13 +303,6 @@ class User(db.Model):
         back_populates='author'
     )
 
-    photos = db.relationship(
-        'Photo',
-        lazy='dynamic',
-        cascade='all, delete-orphan',
-        back_populates='owner'
-    )
-
     post_reactions = db.relationship(
         'PostReaction',
         lazy='dynamic',
@@ -324,6 +317,21 @@ class User(db.Model):
         back_populates='actor'
     )
 
+    photos = db.relationship(
+        'Photo',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='owner'
+    )
+
+    # photo albums the user created
+    photo_albums = db.relationship(
+        'PhotoAlbum',
+        lazy='dynamic',
+        cascade='all, delete-orphan',
+        back_populates='owner'
+    )
+
     # photo albums the user contributes to
     associated_albums = db.relationship(
         'PhotoAlbumContribution',
@@ -332,9 +340,12 @@ class User(db.Model):
         back_populates='contributor'
     )
 
-    def __init__(self, name, gender):
-        self.name = name
-        self.gender = gender
+    def __init__(self, first_name, last_name, email, password, gender, **kw):
+        self.first_name = first_name
+        self.last_name = last_name or 'lovelace'
+        self.email = email or 'me@email.com'
+        self.password = password or 'secret'
+        self.gender = gender or Gender.OTHERS
         self.created = datetime.utcnow()
 
     def __repr__(self):

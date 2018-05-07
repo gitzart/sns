@@ -56,8 +56,15 @@ class PhotoAlbum(db.Model):
     created = db.Column(db.DateTime)
     updated = db.Column(db.DateTime)
 
-    owner = db.Column(db.Integer, db.ForeignKey('users.id'))
-    cover_photo_id = db.Column(db.Integer, db.ForeignKey('photos.id'))
+    owner_id = db.Column(
+        db.Integer,
+        db.ForeignKey('users.id')
+    )
+
+    cover_photo_id = db.Column(
+        db.Integer,
+        db.ForeignKey('photos.id', name='photo_albums_cover_photo_id_fkey')
+    )
 
     owner = db.relationship(
         'User',
@@ -67,12 +74,13 @@ class PhotoAlbum(db.Model):
 
     cover_photo = db.relationship(
         'Photo',
-        lazy='joined',
-        back_populates='album_cover'
+        foreign_keys=cover_photo_id,
+        lazy='joined'
     )
 
     photos = db.relationship(
         'Photo',
+        foreign_keys='Photo.album_id',
         lazy='dynamic',
         back_populates='album'
     )
@@ -114,22 +122,15 @@ class Photo(db.Model):
 
     album = db.relationship(
         'PhotoAlbum',
+        foreign_keys=album_id,
         lazy='joined',
         back_populates='photos'
-    )
-
-    # is the photo an album cover?
-    album_cover = db.relationship(
-        'PhotoAlbum',
-        lazy='joined',
-        uselist=False,
-        back_populates='cover_photo'
     )
 
     # photo post
     post = db.relationship(
         'Post',
-        lazy='lazy',
+        lazy='joined',
         cascade='all, delete-orphan',
         uselist=False,
         back_populates='photo'
@@ -146,4 +147,5 @@ class Photo(db.Model):
         )
 
     def is_album_cover(self):
-        return self.album_cover is not None
+        return PhotoAlbum.query.filter_by(cover_photo_id=self.id). \
+            first() is not None
