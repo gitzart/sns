@@ -36,7 +36,7 @@ def test(coverage):
         cov.html_report()
         cov.erase()
         return 0
-    return 1
+    return rv
 
 
 if __name__ == '__main__':
