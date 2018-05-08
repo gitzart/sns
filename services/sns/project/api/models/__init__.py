@@ -1,8 +1,4 @@
-from .comment import Comment, CommentReaction
-from .photo import Photo, PhotoAlbum, PhotoAlbumContribution
-from .post import Post, PostReaction
-from .user import Follower, Friendship, User
-
+"""Namespace for database models."""
 
 __all__ = [
     'Comment',
@@ -16,3 +12,8 @@ __all__ = [
     'PostReaction',
     'User',
 ]
+
+from .comment import Comment, CommentReaction
+from .photo import Photo, PhotoAlbum, PhotoAlbumContribution
+from .post import Post, PostReaction
+from .user import Follower, Friendship, User
