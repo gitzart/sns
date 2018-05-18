@@ -67,7 +67,7 @@ class Friendship(db.Model):
         self.created = created or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s, %s>' % (
+        return '<{} {}, {}>'.format(
             self.__class__.__name__,
             self.left_user.name,
             self.right_user.name,
@@ -162,7 +162,7 @@ class Follower(db.Model):
         self.created = create or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s, %s>' % (
+        return '<{} {}, {}>'.format(
             self.__class__.__name__,
             self.follower.name,
             self.followed.name,
@@ -210,8 +210,7 @@ class Follower(db.Model):
             return cls(follower, followed, expiration)
 
     @classmethod
-    def update(cls, follower, followed, expiration=None,
-               mutual=False, lazy=False):
+    def update(cls, follower, followed, expiration=None, mutual=False, lazy=False):
         """
         :param mutual: When True, relationship will be updated mutually.
 
@@ -232,8 +231,10 @@ class Follower(db.Model):
                 pass
             except ValueError:
                 # raise when parameter ``mutual`` is True
-                e = ('need bi-directional relationship to unpack, '
-                     'but only one exists: %s') % rv[0]
+                e = (
+                    'need bi-directional relationship to unpack, '
+                    'but only one exists: {}'
+                ).format(rv[0])
                 raise ValueError(e) from None
             else:
                 r1.expiration = r2.expiration = expiration
@@ -340,19 +341,23 @@ class User(db.Model):
         back_populates='contributor'
     )
 
-    def __init__(self, first_name, last_name, email, password, gender, **kw):
+    def __init__(self, first_name, gender):
         self.first_name = first_name
-        self.last_name = last_name or 'lovelace'
-        self.email = email or 'me@email.com'
-        self.password = password or 'secret'
+        self.last_name = 'lovelace'
+        self.email = f'{first_name}@email.com'
+        self.password = 'secret'
         self.gender = gender or Gender.OTHERS
         self.created = datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__,
-            self.name,
+            self.first_name,
         )
+
+    @property
+    def fullname(self):
+        return f'{self.first_name} {self.last_name}'
 
     @property
     def friends(self):

@@ -47,7 +47,7 @@ class CommentReaction(db.Model):
         self.created = created or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__,
             self.reaction,
         )
@@ -98,7 +98,7 @@ class Comment(db.Model):
         self.updated = updated or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %d>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__,
             self.id,
         )

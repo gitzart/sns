@@ -14,8 +14,7 @@ class FriendshipState(Enum):
             'accepted': 'The user has become a friend of another users.',
             'blocked': 'The user has blocked another users.',
             'pending': "The user's friend request is pending.",
-            'suggested':
-                "A friend of the user's has made a friend suggestion.",
+            'suggested': "A friend of the user's has made a friend suggestion.",
         }
         return d[self.value]
 

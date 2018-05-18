@@ -40,7 +40,7 @@ class PhotoAlbumContribution(db.Model):
         self.created = created or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s, %s>' % (
+        return '<{} {}, {}>'.format(
             self.__class__.__name__,
             self.album.title,
             self.contributor.first_name
@@ -97,7 +97,7 @@ class PhotoAlbum(db.Model):
         self.updated = updated
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__,
             self.title,
         )
@@ -141,7 +141,7 @@ class Photo(db.Model):
         self.created = created or datetime.utcnow()
 
     def __repr__(self):
-        return '<%s %s>' % (
+        return '<{} {}>'.format(
             self.__class__.__name__,
             self.caption or self.id,
         )
