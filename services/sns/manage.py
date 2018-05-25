@@ -25,6 +25,12 @@ def create_db():
 
 
 @cli.command()
+def load_db():
+    with open('data.sql') as file:
+        db.engine.execute(file.read())
+
+
+@cli.command()
 @click.option('-c', '--coverage', is_flag=True)
 def test(coverage):
     rv = pytest.main([])
