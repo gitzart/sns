@@ -12,6 +12,7 @@ forked-graphene-sqlalchemy==2.1.0
 graphene==2.1
 graphql-core==2.0
 graphql-relay==0.4.5
+gunicorn==19.8.1
 iso8601==0.1.12
 itsdangerous==0.24
 Jinja2==2.10
