@@ -2,6 +2,10 @@ import re
 
 import graphene
 
+from sqlalchemy.sql import expression
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import DateTime
+
 from project import db
 
 
@@ -39,3 +43,14 @@ def to_sa_enum(py_enum):
         name=to_snake_case(py_enum.__name__),
         values_callable=lambda x: [e.value for e in x],
     )
+
+
+class utcnow(expression.FunctionElement):
+    """SQLAlchemy UTC timestamp extension."""
+    type = DateTime()
+
+
+@compiles(utcnow, 'postgresql')
+def pg_utcnow(element, compiler, **kwargs):
+    """Timestamp extension for PostgreSQL."""
+    return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
