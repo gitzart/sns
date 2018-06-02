@@ -9,6 +9,30 @@ from sqlalchemy.types import DateTime
 from project import db
 
 
+def connection_factory(_type):
+    """A function to generate the custom relay Connection class.
+
+    :param _type: GraphQL ObjectType class.
+    """
+
+    class Connection(graphene.relay.Connection, node=_type):
+        total_count = graphene.Int(
+            description='The total count of items in the connection.'
+        )
+
+        def resolve_total_count(connection, info):
+            return connection.length
+
+    return Connection
+
+
+def get_direction_func(dir):
+    """Returns the SQLAlchemy order direction functions, asc or desc."""
+    if dir == OrderDirection.ASC:
+        return db.asc
+    return db.desc
+
+
 # From this response in Stackoverflow
 # http://stackoverflow.com/a/1176023/1072990
 def to_snake_case(camel_str):
@@ -34,6 +58,10 @@ def to_gql_enum(py_enum):
         d[key] = value
 
     return type(py_enum.__name__, (graphene.Enum,), d)
+
+
+# Circular reference
+from project.api.schemas.enums import OrderDirection
 
 
 def to_sa_enum(py_enum):
