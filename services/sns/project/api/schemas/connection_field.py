@@ -4,7 +4,7 @@ from sqlalchemy.orm.query import Query as SQLAlchemyQuery
 
 
 # See the implementation of graphene_sqlalchemy library
-# https://github.com/graphql-python/graphene-sqlalchemy/blob/master/graphene_sqlalchemy/fields.py  # noqa
+# https://github.com/graphql-python/graphene-sqlalchemy/blob/master/graphene_sqlalchemy/fields.py
 class ConnectionField(relay.ConnectionField):
     @classmethod
     def connection_resolver(cls, resolver, connection, root, info, **args):

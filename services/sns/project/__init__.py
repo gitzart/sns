@@ -4,12 +4,14 @@ import warnings
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_debugtoolbar import DebugToolbarExtension
+from flask_bcrypt import Bcrypt
 
 
 # ignore psycopg2 binary package `UserWarning`
 warnings.filterwarnings('ignore', module='psycopg2')
 
 db = SQLAlchemy()
+bcrypt = Bcrypt()
 toolbar = DebugToolbarExtension()
 
 
@@ -23,6 +25,7 @@ def create_app(app_config=None):
 
     # set up extensions
     db.init_app(app)
+    bcrypt.init_app(app)
     toolbar.init_app(app)
 
     # register blueprints

@@ -1,9 +1,12 @@
 aniso8601==3.0.0
 attrs==17.4.0
+bcrypt==3.1.4
 blinker==1.4
+cffi==1.11.5
 click==6.7
 coverage==4.5.1
 Flask==0.12.2
+Flask-Bcrypt==0.7.1
 Flask-Cors==3.0.3
 Flask-DebugToolbar==0.10.1
 Flask-GraphQL==1.4.1
@@ -22,6 +25,8 @@ pluggy==0.6.0
 promise==2.1
 psycopg2==2.7.4
 py==1.5.3
+pycparser==2.18
+PyJWT==1.6.4
 pytest==3.5.0
 Rx==1.6.1
 singledispatch==3.4.0.3

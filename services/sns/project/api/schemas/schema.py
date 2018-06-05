@@ -4,9 +4,11 @@ import graphene
 
 from graphene import relay
 from graphene.types.datetime import Date, DateTime
+from graphql_relay import from_global_id
+from sqlalchemy import exc
 from sqlalchemy.dialects import postgresql
 
-from project import db
+from project import bcrypt, db
 from project.api.models.user import (
     Friendship as FriendshipModel,
     User as UserModel,
@@ -51,10 +53,6 @@ class BasicUserFields(graphene.Interface):
     username = graphene.String(
         description='Unique username. Used as part of the profile URL.'
     )
-    created = DateTime(
-        name='createdTime',
-        description='The user account creation date.'
-    )
     birthday = Date(
         description="The user's birthday."
     )
@@ -75,6 +73,10 @@ class BasicUserFields(graphene.Interface):
 class User(graphene.ObjectType):
     """An individual's account."""
 
+    created = DateTime(
+        name='createdTime',
+        description='The user account creation date.'
+    )
     friends = ConnectionField(
         lambda: UserConnection,
         description='Friends of the user.',
@@ -413,9 +415,113 @@ FriendRequestConnection = connection_factory(FriendRequest)
 FriendSuggestionConnection = connection_factory(FriendSuggestion)
 
 
+class CreateUserInput:
+    first_name = graphene.String(
+        required=True,
+        description='First name of the user.'
+    )
+    last_name = graphene.String(
+        required=True,
+        description='Last or family name of the user.'
+    )
+    email = graphene.String(
+        required=True,
+        description="The user's email which is used to log in."
+    )
+    password = graphene.String(
+        required=True,
+        description='User account password.'
+    )
+    gender = Gender(
+        required=True,
+        description="Gender of the user."
+    )
+
+
+class CreateUser(relay.ClientIDMutation):
+    user = graphene.Field(User, description='The new user.')
+
+    class Input(CreateUserInput):
+        pass
+
+    @classmethod
+    def mutate_and_get_payload(cls, root, info, **input):
+        # Validate inputs
+        for key, value in input.items():
+            if isinstance(value, str) and not value.strip():
+                raise Exception(f'{key} must be non-empty.')
+
+        user = UserModel.query.filter_by(email=input['email']).first()
+        if user is not None:
+            raise Exception('email already exists.')
+
+        password = input['password']
+        input['password'] = bcrypt.generate_password_hash(password).decode()
+        user = UserModel(**input)
+
+        try:
+            db.session.add(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise Exception(e.args)
+
+        return cls(user=user)
+
+
+class UpdateUserInput(BasicUserFields):
+    id = graphene.ID(
+        required=True,
+        description='The User ID to update.'
+    )
+
+
+class UpdateUser(relay.ClientIDMutation):
+    user = graphene.Field(User, description='The updated user.')
+
+    class Input(UpdateUserInput):
+        pass
+
+    @classmethod
+    def mutate_and_get_payload(cls, root, info, **input):
+        non_empty_fields = ['first_name', 'last_name', 'email']
+
+        # Validate inputs
+        for field in non_empty_fields:
+            value = input.get(field)
+            if value is not None and not value.strip():
+                raise Exception(f'{field} must be non-empty.')
+
+        # Validate user ID
+        _type, id = from_global_id(input.pop('id'))
+        try:
+            user = UserModel.query.get(id)
+        except Exception as e:
+            raise Exception('ID is not valid.')
+
+        if user is not None:
+            for key, value in input.items():
+                setattr(user, key, value)
+        else:
+            raise Exception('User does not exist.')
+
+        try:
+            db.session.commit()
+        except exc.IntegrityError as e:
+            db.session.rollback()
+            raise Exception('email or username already exists.')
+
+        return cls(user=user)
+
+
 class Query(graphene.ObjectType):
     node = relay.Node.Field()
     user = relay.Node.Field(User)
 
 
-schema = graphene.Schema(query=Query)
+class Mutation(graphene.ObjectType):
+    create_user = CreateUser.Field(description='Create a new user.')
+    update_user = UpdateUser.Field(description='Update an existing user.')
+
+
+schema = graphene.Schema(query=Query, mutation=Mutation)
