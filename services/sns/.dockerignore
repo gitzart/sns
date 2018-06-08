@@ -107,5 +107,11 @@ ENV/
 # MacOS
 .DS_Store
 
+# docker
+.dockerignore
+Dockerfile-dev
+Dockerfile-prod
+
 # Misc
 README.md
+migrations
