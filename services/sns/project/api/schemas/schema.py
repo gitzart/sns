@@ -95,12 +95,12 @@ class User(graphene.ObjectType):
     friend_requests = ConnectionField(
         lambda: FriendRequestConnection,
         description='Friend requests sent to or by the user.',
-        indicator=ActionDirection(default_value=ActionDirection.INBOX.value)
+        action_direction=ActionDirection(default_value=ActionDirection.INBOX.value)
     )
     friend_suggestions = ConnectionField(
         lambda: FriendSuggestionConnection,
         description='Friend suggestions made to or by the user.',
-        indicator=ActionDirection(default_value=ActionDirection.INBOX.value)
+        action_direction=ActionDirection(default_value=ActionDirection.INBOX.value)
     )
     blocked_users = ConnectionField(
         lambda: UserConnection,
@@ -176,17 +176,17 @@ class User(graphene.ObjectType):
 
     def resolve_friend_requests(instance, info, **kwargs):
         friend_requests = []
-        indicator = kwargs['indicator']
+        action_direction = kwargs['action_direction']
         subquery_base = FriendshipModel.query.filter_by(
             state=FriendshipState.PENDING.value,
             left_user_id=instance.id
         )
 
-        if indicator == ActionDirection.INBOX:
+        if action_direction == ActionDirection.INBOX:
             subquery = subquery_base.filter(
                 FriendshipModel.action_user_id != instance.id
             )
-        elif indicator == ActionDirection.OUTBOX:
+        elif action_direction == ActionDirection.OUTBOX:
             subquery = subquery_base.filter(
                 FriendshipModel.action_user_id == instance.id
             )
@@ -222,14 +222,14 @@ class User(graphene.ObjectType):
 
     def resolve_friend_suggestions(instance, info, **kwargs):
         friend_suggestions = []
-        indicator = kwargs['indicator']
+        action_direction = kwargs['action_direction']
         subquery_base = FriendshipModel.query.filter_by(
             state=FriendshipState.SUGGESTED.value
         )
 
-        if indicator == ActionDirection.INBOX:
+        if action_direction == ActionDirection.INBOX:
             subquery = subquery_base.filter_by(left_user_id=instance.id)
-        elif indicator == ActionDirection.OUTBOX:
+        elif action_direction == ActionDirection.OUTBOX:
             subquery = subquery_base.filter(
                 FriendshipModel.action_user_id == instance.id,
                 FriendshipModel.left_user_id < FriendshipModel.right_user_id
