@@ -81,4 +81,4 @@ class utcnow(expression.FunctionElement):
 @compiles(utcnow, 'postgresql')
 def pg_utcnow(element, compiler, **kwargs):
     """Timestamp extension for PostgreSQL."""
-    return "TIMEZONE('utc', CURRENT_TIMESTAMP)"
+    return "TIMEZONE('utc', statement_timestamp())"
