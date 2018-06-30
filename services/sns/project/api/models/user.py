@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 
 from project import db
-from project.utils import to_sa_enum
+from project.utils import to_sa_enum, utcnow
 from .enums import FriendshipState, Gender, MaritalStatus
 
 
@@ -9,12 +9,11 @@ SAFriendshipState = to_sa_enum(FriendshipState)
 SAGender = to_sa_enum(Gender)
 SAMaritalStatus = to_sa_enum(MaritalStatus)
 
-
 ACCEPTED, BLOCKED, PENDING, SUGGESTED = FriendshipState.__members__.values()
 
 
 class Friendship(db.Model):
-    """Builds ``bi-directional`` friendship between two users."""
+    """Provide a mutual friendship for two people."""
 
     __tablename__ = 'friendships'
 
@@ -22,254 +21,142 @@ class Friendship(db.Model):
 
     left_user_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id'),
+        db.ForeignKey('users.id', ondelete='CASCADE'),
         primary_key=True
     )
 
     right_user_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id'),
+        db.ForeignKey('users.id', ondelete='CASCADE'),
         primary_key=True
     )
 
     action_user_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id'),
+        db.ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False
     )
 
+    created_at = db.Column(db.DateTime, server_default=utcnow())
+    updated_at = db.Column(
+        db.DateTime, server_default=utcnow(), onupdate=utcnow()
+    )
     state = db.Column(SAFriendshipState, nullable=False)
 
-    created = db.Column(db.DateTime)
-
-    left_user = db.relationship(
-        'User',
-        foreign_keys=left_user_id,
-        backref=db.backref('right_users', cascade='all, delete-orphan')
-    )
-
-    right_user = db.relationship(
-        'User',
-        foreign_keys=right_user_id,
-        backref=db.backref('left_users', cascade='all, delete-orphan')
-    )
-
-    action_user = db.relationship(
-        'User',
-        foreign_keys=action_user_id
-    )
-
-    def __init__(self, n1, n2, action_user, state, created=None):
-        self.left_user = n1
-        self.right_user = n2
-        self.action_user = action_user
-        self.state = state
-        self.created = created or datetime.utcnow()
+    left_user = db.relationship('User', foreign_keys=left_user_id)
+    right_user = db.relationship('User', foreign_keys=right_user_id)
+    action_user = db.relationship('User', foreign_keys=action_user_id)
 
     def __repr__(self):
-        return '<{} {}, {}>'.format(
-            self.__class__.__name__,
-            self.left_user.name,
-            self.right_user.name,
-        )
+        try:
+            return '<{} {}, {}>'.format(
+                self.__class__.__name__,
+                self.left_user.first_name,
+                self.right_user.first_name
+            )
+        except AttributeError:
+            return super().__repr__()
 
     @classmethod
-    def get(cls, n1, n2):
-        """Helper method whose function is different from
-        from SQLAlchemy Query method ``get()``.
-
-        Get mutual instances based on the given composite primary key,
-        together with additional filtering criteria, if given.
-
-        For example, to see if user A and B has blocked each other::
-
-            Friendship.get(A, B).filter_by(type='block'). \
-                count() > 0
+    def get(cls, id_1, id_2):
+        """Given the composite primary key, return the query which
+        finds the relationship of two people.
         """
-
         return cls.query.filter(db.or_(
-            db.and_(cls.left_user == n1, cls.right_user == n2),
-            db.and_(cls.left_user == n2, cls.right_user == n1)
+            db.and_(cls.left_user_id == id_1, cls.right_user_id == id_2),
+            db.and_(cls.left_user_id == id_2, cls.right_user_id == id_1)
         ))
 
     @classmethod
-    def build(cls, n1, n2, action_user, state):
-        created = datetime.utcnow()
-        return (cls(n1, n2, action_user, state, created),
-                cls(n2, n1, action_user, state, created))
+    def build(cls, id_1, id_2, id_3, state):
+        """Build a mutual relationship."""
+        return (
+            cls(left_user_id=id_1, right_user_id=id_2, action_user_id=id_3,
+                state=state),
+            cls(left_user_id=id_2, right_user_id=id_1, action_user_id=id_3,
+                state=state),
+        )
+
+    @staticmethod
+    def update(iter, action_user_id, state):
+        """
+        :param iter: Iterable :class:`.Friendship` model instances.
+        """
+        for i in range(2):
+            iter[i].action_user_id = action_user_id
+            iter[i].state = state
+        return iter
 
     @classmethod
-    def update(cls, n1, n2, action_user, state, lazy=False):
-        """
-        :param lazy: When True, a new relationship will be built
-            if not already existed.
-        """
-        rv = cls.get(n1, n2).all()
-
-        if rv:
-            r1, r2 = rv
-            r1.created = r2.created = datetime.utcnow()
-            r1.action_user = r2.action_user = action_user
-            r1.state = r2.state = state
-            return r1, r2
-
-        if lazy:
-            return cls.build(n1, n2, action_user, state)
-
-    @classmethod
-    def destroy(cls, n1, n2):
-        return cls.get(n1, n2).delete(synchronize_session=False)
+    def delete(cls, id_1, id_2):
+        """Remove the mutual relationship."""
+        return cls.get(id_1, id_2).delete(synchronize_session=False)
 
 
 class Follower(db.Model):
-    """Builds ``uni or bi-directional`` following and follower
-    relationships.
-    """
+    """Provide a follower or following relationship."""
 
     __tablename__ = 'followers'
 
     follower_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id'),
+        db.ForeignKey('users.id', ondelete='CASCADE'),
         primary_key=True
     )
 
     followed_id = db.Column(
         db.Integer,
-        db.ForeignKey('users.id'),
+        db.ForeignKey('users.id', ondelete='CASCADE'),
         primary_key=True
     )
 
+    created_at = db.Column(db.DateTime, server_default=utcnow())
+    updated_at = db.Column(
+        db.DateTime, server_default=utcnow(), onupdate=utcnow()
+    )
+    is_snoozed = db.Column(db.Boolean, server_default='f')
+    # Snooze timer expiration
     expiration = db.Column(db.DateTime)
-    created = db.Column(db.DateTime)
 
-    follower = db.relationship(
-        'User',
-        foreign_keys=follower_id,
-        backref=db.backref('followed_users', cascade='all, delete-orphan')
-    )
-
-    followed = db.relationship(
-        'User',
-        foreign_keys=followed_id,
-        backref=db.backref('follower_users', cascade='all, delete-orphan')
-    )
-
-    def __init__(self, follower, followed, expiration=None, create=None):
-        self.follower = follower
-        self.followed = followed
-        self.expiration = expiration
-        self.created = create or datetime.utcnow()
+    follower = db.relationship('User', foreign_keys=follower_id)
+    followed = db.relationship('User', foreign_keys=followed_id)
 
     def __repr__(self):
-        return '<{} {}, {}>'.format(
-            self.__class__.__name__,
-            self.follower.name,
-            self.followed.name,
-        )
+        try:
+            return '<{} {}, {}>'.format(
+                self.__class__.__name__,
+                self.follower.first_name,
+                self.followed.first_name
+            )
+        except AttributeError:
+            return super().__repr__()
 
     @classmethod
-    def get(cls, follower, followed, mutual=False):
-        """Helper method whose function is different from
-        from SQLAlchemy Query method ``get()``.
-
-        Get a single instance or mutual instances based on
-        the given follower and followed composite primary key,
-        together with additional filtering criteria, if given.
-
-        For example, to find an unexpired snoozed relationship
-        of the follower::
-
-            Follower.get(follower, followed). \
-                filter(Follower.expiration > datetime.utcnow()). \
-                first()
-
-        :param mutual: Set it to True to find the relationship
-            from both sides.
-        """
-        if mutual:
-            return cls.query.filter(db.or_(
-                db.and_(cls.follower == follower, cls.followed == followed),
-                db.and_(cls.follower == followed, cls.followed == follower)
-            ))
-        else:
-            return cls.query.filter(db.and_(
-                cls.follower == follower,
-                cls.followed == followed,
-            ))
-
-    @classmethod
-    def build(cls, follower, followed, expiration=None, mutual=False):
-        """
-        :param mutual: When True, relationship will be built mutually.
-        """
-        if mutual:
-            return (cls(follower, followed, expiration),
-                    cls(followed, follower, expiration))
-        else:
-            return cls(follower, followed, expiration)
-
-    @classmethod
-    def update(cls, follower, followed, expiration=None, mutual=False, lazy=False):
-        """
-        :param mutual: When True, relationship will be updated mutually.
-
-        :param lazy: When True, a new relationship will be built
-            if not already existed.
-        """
-        if mutual:
-            rv = cls.get(follower, followed, mutual=True).all()
-        else:
-            rv = cls.query.get((follower.id, followed.id))
-
-        if rv:
-            try:
-                r1, r2 = rv
-            except TypeError:
-                # ignore when parameter ``mutual`` is False
-                # and there is only one relationship
-                pass
-            except ValueError:
-                # raise when parameter ``mutual`` is True
-                e = (
-                    'need bi-directional relationship to unpack, '
-                    'but only one exists: {}'
-                ).format(rv[0])
-                raise ValueError(e) from None
-            else:
-                r1.expiration = r2.expiration = expiration
-                return r1, r2
-
-            # quite sure the relationship is one-way
-            rv.expiration = expiration
-            return rv
-
-        if lazy:
-            return cls.build(follower, followed, expiration, mutual)
-
-    @classmethod
-    def destroy(cls, follower, followed, mutual=False):
-        return cls.get(follower, followed, mutual=mutual). \
-            delete(synchronize_session=False)
+    def delete(cls, id_1, id_2):
+        """Remove the relationship."""
+        return cls.query.filter_by(
+            follower_id=id_1, followed_id=id_2
+        ).delete(synchronize_session=False)
 
 
 class User(db.Model):
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, server_default=utcnow())
+    updated_at = db.Column(
+        db.DateTime, server_default=utcnow(), onupdate=utcnow()
+    )
     first_name = db.Column(db.String, nullable=False)
     last_name = db.Column(db.String, nullable=False)
     email = db.Column(db.String, nullable=False, unique=True)
     password = db.Column(db.String, nullable=False)
     gender = db.Column(SAGender, nullable=False)
     username = db.Column(db.String, unique=True)
-    created = db.Column(db.DateTime)
     birthday = db.Column(db.Date)
-    bio = db.Column(db.String)
-    current_city = db.Column(db.String)
+    bio = db.Column(db.Text)
     marital_status = db.Column(SAMaritalStatus)
 
-    # read-only generic friendship query
     friendship = db.relationship(
         'User',
         secondary='friendships',
@@ -279,7 +166,6 @@ class User(db.Model):
         viewonly=True
     )
 
-    # read-only followings and followers queries
     followers = db.relationship(
         'User',
         secondary='followers',
@@ -341,164 +227,194 @@ class User(db.Model):
         back_populates='contributor'
     )
 
-    def __init__(self, first_name, gender):
-        self.first_name = first_name
-        self.last_name = 'lovelace'
-        self.email = f'{first_name}@email.com'
-        self.password = 'secret'
-        self.gender = gender or Gender.OTHERS
-        self.created = datetime.utcnow()
-
     def __repr__(self):
         return '<{} {}>'.format(
             self.__class__.__name__,
-            self.first_name,
+            self.first_name
         )
 
-    @property
-    def fullname(self):
-        return f'{self.first_name} {self.last_name}'
-
-    @property
-    def friends(self):
-        return self.friendship.filter(Friendship.state == ACCEPTED)
-
     @staticmethod
-    def mutual_friends(n1, n2):
-        def criteria(arg):
+    def mutual_friends(id_1, id_2):
+        """
+        :return: :class:`.User` query
+        """
+
+        def criteria(id):
             return db.and_(
-                Friendship.left_user == arg,
+                Friendship.left_user_id == id,
                 Friendship.state == ACCEPTED
             )
 
         mutual_table = (
             db.select([(Friendship.right_user_id).label('id')]).
-            where(criteria(n1)).
+            where(criteria(id_1)).
             intersect(
                 db.select([(Friendship.right_user_id).label('id')]).
-                where(criteria(n2))
+                where(criteria(id_2))
             ).alias('mutual_relationships')
         )
 
         return User.query.join(mutual_table, User.id == mutual_table.c.id)
 
-    def is_friend(self, n):
-        return Friendship.get(self, n).filter_by(state=ACCEPTED).count() > 0
+    def is_friend(self, id):
+        return (
+            Friendship.get(self.id, id).filter_by(state=ACCEPTED).count() > 0
+        )
 
-    def is_mutual_firend(self, n1, n2):
-        return Friendship.query.filter(db.and_(
-            Friendship.left_user == self,
-            Friendship.state == ACCEPTED,
-            db.or_(
-                Friendship.right_user == n1,
-                Friendship.right_user == n2
-            )
-        )).count() == 2
+    def is_following(self, id):
+        return Follower.query.get((self.id, id)) is not None
 
-    def is_following(self, n):
-        return Follower.query.get((self.id, n.id)) is not None
+    def is_mutual_firend_of(self, id_1, id_2):
+        """Check if the viewer is the mutual friend of two people."""
+        return (
+            Friendship.query.
+            filter_by(state=ACCEPTED, left_user_id=self.id).
+            filter(Friendship.right_user_id.in_([id_1, id_2])).
+            count() == 2
+        )
 
-    def is_snoozing(self, n):
-        return Follower.get(self, n).filter(
-            Follower.expiration > datetime.utcnow()
-        ).first() is not None
+    def suggest(self, id_1, id_2):
+        """
+        :return: Iterable :class:`.Friendship` instances
+            if two people can be suggested, otherwise None.
+        """
+        suggestible = (
+            Friendship.query.get((id_1, id_2)) is None and
+            self.is_mutual_firend_of(id_1, id_2)
+        )
 
-    def suggest(self, n1, n2):
-        suggestible = Friendship.get(n1, n2).filter(db.or_(
-            Friendship.state == ACCEPTED,
-            Friendship.state == BLOCKED,
-            Friendship.state == PENDING,
-            Friendship.state == SUGGESTED,
-        )).count() == 0
+        if not suggestible:
+            return None
+        return Friendship.build(id_1, id_2, self.id, SUGGESTED)
 
-        if suggestible and self.is_mutual_firend(n1, n2):
-            return Friendship.build(n1, n2, self, SUGGESTED)
+    def send_friend_request(self, id):
+        """
+        :return: Iterable :class:`.Friendship` instances
+            if the request can be sent, otherwise None.
+        """
+        data = Friendship.get(self.id, id).all()
+
+        if not data:
+            return Friendship.build(self.id, id, self.id, PENDING)
+
+        if data[0].state == SUGGESTED:
+            return Friendship.update(data, self.id, PENDING)
         else:
             return None
 
-    def make_friends(self, n):
-        in_relationship = Friendship.get(self, n).filter(db.or_(
-            Friendship.state == ACCEPTED,
-            Friendship.state == BLOCKED,
-            Friendship.state == PENDING,
-        )).count() > 0
+    def accept(self, id):
+        """
+        :return: Iterable :class:`.Friendship` instances
+            if the pending request can be accepted, otherwise None.
+        """
+        data = Friendship.get(self.id, id).all()
 
-        if in_relationship:
-            return None
-        # update if friend suggestion exists, otherwise build
-        return Friendship.update(self, n, self, PENDING, lazy=True)
-
-    def accept(self, n):
-        # the same user cannot make friend request and accept
-        pending = Friendship.get(self, n).filter(db.and_(
-            Friendship.state == PENDING,
-            Friendship.action_user != self
-        )).count() > 0
-
-        if not pending:
+        if not data or data[0].state != PENDING:
             return None
 
-        # follow each other
-        Follower.update(self, n, mutual=True, lazy=True)
+        # The same person cannot make friend request and accept.
+        if data[0].action_user_id == self.id:
+            return None
+        return Friendship.update(data, self.id, ACCEPTED)
 
-        return Friendship.update(self, n, self, ACCEPTED)
+    def block(self, id):
+        """
+        :return: Iterable :class:`.Friendship` instances
+            if the viewer can block the other person, otherwise None.
+        """
+        data = Friendship.get(self.id, id).all()
 
-    def block(self, n):
-        blocked = Friendship.get(self, n).filter_by(state=BLOCKED).count() > 0
+        if not data:
+            return Friendship.build(self.id, id, self.id, BLOCKED)
 
-        if blocked:
+        # Blocked relationship already exists.
+        if data[0].state == BLOCKED:
+            return None
+        return Friendship.update(data, self.id, BLOCKED)
+
+    def unblock(self, id):
+        """
+        :return: Total count of deleted Friendship records or None.
+        """
+        data = Friendship.get(self.id, id).all()
+
+        if not data or data[0].state != BLOCKED:
             return None
 
-        # stop following each other
-        Follower.destroy(self, n, mutual=True)
-
-        # build if not in relationship, otherwise update
-        return Friendship.update(self, n, self, BLOCKED, lazy=True)
-
-    def unblock(self, n):
-        # only the user who blocked can unblock
-        blocked = Friendship.get(self, n).filter(
-            Friendship.state == BLOCKED,
-            Friendship.action_user == self
-        ).count() > 0
-
-        if not blocked:
-            return None
-        return Friendship.destroy(self, n)
-
-    def unfriend(self, n):
-        if not self.is_friend(n):
-            return None
-        return Friendship.destroy(self, n)
-
-    def decline(self, n):
-        pending = Friendship.get(self, n).filter_by(state=PENDING).count() > 0
-
-        if not pending:
-            return None
-        return Friendship.destroy(self, n)
-
-    def follow(self, n):
-        if self.is_following(n):
-            return None
-        return Follower.build(self, n)
-
-    def unfollow(self, n):
-        if not self.is_following(n):
-            return None
-        return Follower.destroy(self, n)
-
-    def snooze(self, n, days=30):
-        if self.is_snoozing(n):
+        # Only the blocker can unblock.
+        if data[0].action_user_id == self.id:
+            return Friendship.delete(self.id, id)
+        else:
             return None
 
-        if not self.is_following(n):
+    def unfriend(self, id):
+        """
+        :return: Total count of deleted Friendship records or None.
+        """
+        if self.is_friend(id):
+            return Friendship.delete(self.id, id)
+        else:
             return None
 
-        expiration = datetime.utcnow() + timedelta(days=days)
-        return Follower.update(self, n, expiration)
+    def decline_friend_request(self, id):
+        """Decline or cancel the friend request.
 
-    def unsnooze(self, n):
-        if not self.is_snoozing(n):
+        This function works for both sides. The request maker
+        cancels the request or the receiver declines it.
+
+        :return: Total count of deleted Friendship records or None.
+        """
+        data = Friendship.get(self.id, id).all()
+
+        if data and data[0].state == PENDING:
+            return Friendship.delete(self.id, id)
+        else:
             return None
-        return Follower.update(self, n, expiration=None)
+
+    def follow(self, id):
+        """
+        :return: :class:`.Follower` instance if the viewer can follow,
+            otherwise None.
+        """
+        blocked = Friendship.get(self.id, id).filter_by(state=BLOCKED).all()
+
+        if self.is_following(id) or blocked:
+            return None
+        return Follower(follower_id=self.id, followed_id=id)
+
+    def unfollow(self, id):
+        """
+        :return: Total count of deleted Follower records or None.
+        """
+        if self.is_following(id):
+            return Follower.delete(self.id, id)
+        else:
+            return None
+
+    def snooze(self, id, days=30):
+        """
+        :return: :class:`.Follower` instance if the viewer can snooze,
+            otherwise None.
+        """
+        data = Follower.query.get((self.id, id))
+
+        if data is None or data.is_snoozed:
+            return None
+
+        data.expiration = datetime.utcnow() + timedelta(days=days)
+        data.is_snoozed = True
+        return data
+
+    def unsnooze(self, id):
+        """
+        :return: :class:`.Follower` instance if the viewer can unsnooze,
+            otherwise None.
+        """
+        data = Follower.query.get((self.id, id))
+
+        if data is None or not data.is_snoozed:
+            return None
+
+        data.expiration = None
+        data.is_snoozed = False
+        return data

@@ -1,17 +1,17 @@
-INSERT INTO users (first_name, last_name, email, password, gender, created, marital_status) VALUES
-('amy', 'pond', 'amy@email.com', 'secret', 'female', '2016-05-08 12:23:57.41017', 'single'),
-('bill', 'potts', 'bill@email.com', 'secret', 'female', '2016-05-08 12:27:13.520557', 'single'),
-('doctor', 'who', 'doctor@email.com', 'secret', 'others', '2017-05-09 17:05:46.000723', 'married'),
-('rory', 'williams', 'rory@email.com', 'secret', 'male', '2018-02-09 17:09:02.634509', 'single'),
-('rose', 'tyler', 'rose@email.com', 'secret', 'female', '2018-03-08 07:23:26.47011', 'married'),
-('dalek', 'thay', 'dalek@email.com', 'secret', 'others', '2018-05-09 16:42:35.801206', 'open relationship'),
-('angel', 'statue', 'angel@email.com', 'secret', 'others', '2018-05-10 19:53:42.086208', 'open relationship'),
-('song', 'river', 'song@email.com', 'secret', 'female', '2018-05-11 16:53:52.57197', 'married'),
-('clara', 'oswald', 'clara@email.com', 'secret', 'female', '2018-05-12 17:03:21.759576', 'taken'),
-('danny', 'pink', 'danny@email.com', 'secret', 'male', '2018-05-15 20:23:21.759576', 'taken'),
-('cyber', 'mat', 'cyber@email.com', 'secret', 'others', '2018-05-19 23:13:12.057208', 'complicated');
+INSERT INTO users (first_name, last_name, email, password, gender, created_at, marital_status) VALUES
+('amy', 'pond', 'amy@email.com', 'amyspassword', 'female', '2016-05-08 12:23:57.41017', 'single'),
+('bill', 'potts', 'bill@email.com', 'billspassword', 'female', '2016-05-08 12:27:13.520557', 'single'),
+('doctor', 'who', 'doctor@email.com', 'doctorspassword', 'others', '2017-05-09 17:05:46.000723', 'married'),
+('rory', 'williams', 'rory@email.com', 'roryspassword', 'male', '2018-02-09 17:09:02.634509', 'single'),
+('rose', 'tyler', 'rose@email.com', 'rosespassword', 'female', '2018-03-08 07:23:26.47011', 'married'),
+('dalek', 'thay', 'dalek@email.com', 'dalekspassword', 'others', '2018-05-09 16:42:35.801206', 'open relationship'),
+('angel', 'statue', 'angel@email.com', 'angelspassword', 'others', '2018-05-10 19:53:42.086208', 'open relationship'),
+('song', 'river', 'song@email.com', 'songspassword', 'female', '2018-05-11 16:53:52.57197', 'married'),
+('clara', 'oswald', 'clara@email.com', 'claraspassword', 'female', '2018-05-12 17:03:21.759576', 'taken'),
+('danny', 'pink', 'danny@email.com', 'dannyspassword', 'male', '2018-05-15 20:23:21.759576', 'taken'),
+('cyber', 'mat', 'cyber@email.com', 'cyberspassword', 'others', '2018-05-19 23:13:12.057208', 'complicated');
 
-INSERT INTO friendships (left_user_id, right_user_id, action_user_id, state, created) VALUES
+INSERT INTO friendships (left_user_id, right_user_id, action_user_id, state, created_at) VALUES
 (1, 2, 2, 'accepted', '2016-05-08 12:27:13.520557'),
 (2, 1, 2, 'accepted', '2016-05-08 12:27:13.520557'),
 (1, 3, 3, 'accepted', '2017-05-09 17:05:46.000723'),
