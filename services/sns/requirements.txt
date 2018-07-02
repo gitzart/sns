@@ -13,8 +13,7 @@ Flask-DebugToolbar==0.10.1
 Flask-GraphQL==1.4.1
 Flask-Migrate==2.1.1
 Flask-SQLAlchemy==2.3.2
-forked-graphene-sqlalchemy==2.1.0
-graphene==2.1
+graphene==2.1.2
 graphql-core==2.0
 graphql-relay==0.4.5
 gunicorn==19.8.1
