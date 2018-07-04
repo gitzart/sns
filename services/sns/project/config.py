@@ -9,6 +9,7 @@ class BaseConfig:
     SECRET_KEY = os.getenv('SECRET_KEY')
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = False
     BCRYPT_LOG_ROUNDS = 4
 
 
