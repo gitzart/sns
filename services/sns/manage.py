@@ -1,3 +1,5 @@
+import sys
+
 import click
 import coverage
 import pytest
@@ -41,8 +43,8 @@ def test(coverage):
         cov.report(show_missing=True, skip_covered=True)
         cov.html_report()
         cov.erase()
-        return 0
-    return rv
+        sys.exit(0)
+    sys.exit(1)
 
 
 if __name__ == '__main__':
