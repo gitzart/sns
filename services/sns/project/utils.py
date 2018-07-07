@@ -2,35 +2,23 @@ import re
 
 import graphene
 
-from sqlalchemy.sql import expression
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.sql import expression
 from sqlalchemy.types import DateTime
 
 from project import db
 
 
-def connection_factory(_type):
-    """A function to generate the custom relay Connection class.
-
-    :param _type: GraphQL ObjectType class.
+def order_by(query, model, props):
     """
-
-    class Connection(graphene.relay.Connection, node=_type):
-        total_count = graphene.Int(
-            description='The total count of items in the connection.'
-        )
-
-        def resolve_total_count(connection, info):
-            return connection.length
-
-    return Connection
-
-
-def get_direction_func(dir):
-    """Returns the SQLAlchemy order direction functions, asc or desc."""
-    if dir == OrderDirection.ASC:
-        return db.asc
-    return db.desc
+    :param props: Properties (direction and field) to order query by.
+    """
+    if props:
+        direction, field = props.values()
+        field = getattr(model, field)
+        direction = getattr(field, direction)
+        return query.order_by(direction())
+    return query
 
 
 # From this response in Stackoverflow
@@ -60,10 +48,6 @@ def to_gql_enum(py_enum):
     return type(py_enum.__name__, (graphene.Enum,), d)
 
 
-# Circular reference
-from project.api.schemas.enums import OrderDirection
-
-
 def to_sa_enum(py_enum):
     """Convert Python enumeration into SQLAlchemy enumeration."""
     return db.Enum(
@@ -80,5 +64,5 @@ class utcnow(expression.FunctionElement):
 
 @compiles(utcnow, 'postgresql')
 def pg_utcnow(element, compiler, **kwargs):
-    """Timestamp extension for PostgreSQL."""
+    """PostgreSQL timestamp syntax."""
     return "TIMEZONE('utc', statement_timestamp())"
