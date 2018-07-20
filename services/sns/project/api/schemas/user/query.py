@@ -261,4 +261,3 @@ FriendSuggestionConnection = connection_factory(
 
 class Query(graphene.ObjectType):
     user = relay.Node.Field(UserType)
-    suggestion = relay.Node.Field(FriendSuggestionType)

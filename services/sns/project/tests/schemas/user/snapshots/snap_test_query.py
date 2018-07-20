@@ -7,25 +7,23 @@ from snapshottest import Snapshot
 
 snapshots = Snapshot()
 
-snapshots['test_user_query_basic_profile 1'] = {
+snapshots['test_basic_profile 1'] = {
     'data': {
         'user': {
             'bio': None,
             'birthday': None,
-            'createdAt': '2018-07-08T18:46:39.429274',
             'email': 'rory@email.com',
             'firstName': 'rory',
             'gender': 'MALE',
             'id': 'VXNlclR5cGU6MQ==',
             'lastName': 'williams',
             'maritalStatus': None,
-            'updatedAt': '2018-07-08T18:46:39.429274',
             'username': None
         }
     }
 }
 
-snapshots['test_user_query_relationship_profile 1'] = {
+snapshots['test_relationship_profile 1'] = {
     'data': {
         'user': {
             'blockedUsers': {
@@ -90,14 +88,13 @@ snapshots['test_user_query_relationship_profile 1'] = {
     }
 }
 
-snapshots['test_user_query_friend_requests 1'] = {
+snapshots['test_friend_requests 1'] = {
     'data': {
         'user': {
             'friendRequests': {
                 'edges': [
                     {
                         'node': {
-                            'createdAt': '2018-07-08T18:46:40.657464',
                             'from': {
                                 'id': 'VXNlclR5cGU6MQ==',
                                 'name': 'rory williams'
@@ -111,7 +108,6 @@ snapshots['test_user_query_friend_requests 1'] = {
                     },
                     {
                         'node': {
-                            'createdAt': '2018-07-08T18:46:40.656864',
                             'from': {
                                 'id': 'VXNlclR5cGU6Mw==',
                                 'name': 'doctor who'
@@ -125,7 +121,6 @@ snapshots['test_user_query_friend_requests 1'] = {
                     },
                     {
                         'node': {
-                            'createdAt': '2018-07-08T18:46:40.656002',
                             'from': {
                                 'id': 'VXNlclR5cGU6Mw==',
                                 'name': 'doctor who'
@@ -146,14 +141,13 @@ snapshots['test_user_query_friend_requests 1'] = {
     }
 }
 
-snapshots['test_user_query_friend_suggestions 1'] = {
+snapshots['test_friend_suggestions 1'] = {
     'data': {
         'user': {
             'friendSuggestions': {
                 'edges': [
                     {
                         'node': {
-                            'createdAt': '2018-07-08T18:46:40.898702',
                             'from': {
                                 'id': 'VXNlclR5cGU6Mw==',
                                 'name': 'doctor who'
@@ -173,7 +167,6 @@ snapshots['test_user_query_friend_suggestions 1'] = {
                     },
                     {
                         'node': {
-                            'createdAt': '2018-07-08T18:46:40.897565',
                             'from': {
                                 'id': 'VXNlclR5cGU6MQ==',
                                 'name': 'rory williams'

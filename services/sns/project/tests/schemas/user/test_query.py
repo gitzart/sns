@@ -4,6 +4,7 @@ from graphql_relay import to_global_id
 from project.api.models.enums import FriendshipState
 from project.api.models.user import Follower, Friendship
 from project.api.schemas import schema
+from project.api.schemas.user.query import UserType
 
 
 client = test.Client(schema)
@@ -11,13 +12,11 @@ client = test.Client(schema)
 ACCEPTED, BLOCKED, PENDING, SUGGESTED = FriendshipState.__members__.values()
 
 
-def test_user_query_basic_profile(setup, snapshot):
+def test_basic_profile(setup, snapshot):
     query = '''
         query BasicInfo($id: ID!) {
           user(id: $id) {
             id
-            createdAt
-            updatedAt
             firstName
             lastName
             email
@@ -29,11 +28,11 @@ def test_user_query_basic_profile(setup, snapshot):
           }
         }
     '''
-    id = to_global_id('UserType', 1)
+    id = to_global_id(UserType.__name__, 1)
     snapshot.assert_match(client.execute(query, variable_values={'id': id}))
 
 
-def test_user_query_relationship_profile(setup, db, snapshot):
+def test_relationship_profile(setup, db, snapshot):
     db.session.add_all(Friendship.build(2, 3, 2, ACCEPTED))
     db.session.add_all(Friendship.build(2, 4, 2, ACCEPTED))
     db.session.add_all(Friendship.build(2, 5, 2, ACCEPTED))
@@ -73,11 +72,11 @@ def test_user_query_relationship_profile(setup, db, snapshot):
           }
         }
     '''
-    id = to_global_id('UserType', 2)
+    id = to_global_id(UserType.__name__, 2)
     snapshot.assert_match(client.execute(query, variable_values={'id': id}))
 
 
-def test_user_query_friend_requests(setup, db, snapshot):
+def test_friend_requests(setup, db, snapshot):
     db.session.add_all(Friendship.build(3, 4, 3, PENDING))
     db.session.add_all(Friendship.build(3, 5, 3, PENDING))
     db.session.add_all(Friendship.build(3, 1, 1, PENDING))
@@ -92,7 +91,6 @@ def test_user_query_friend_requests(setup, db, snapshot):
               edges {
                 node {
                   id
-                  createdAt
                   to {
                     ...profile
                   }
@@ -109,11 +107,11 @@ def test_user_query_friend_requests(setup, db, snapshot):
           name
         }
     '''
-    id = to_global_id('UserType', 3)
+    id = to_global_id(UserType.__name__, 3)
     snapshot.assert_match(client.execute(query, variable_values={'id': id}))
 
 
-def test_user_query_friend_suggestions(setup, db, snapshot):
+def test_friend_suggestions(setup, db, snapshot):
     db.session.add_all(Friendship.build(4, 5, 1, SUGGESTED))
     db.session.add_all(Friendship.build(4, 2, 3, SUGGESTED))
     db.session.commit()
@@ -127,7 +125,6 @@ def test_user_query_friend_suggestions(setup, db, snapshot):
               edges {
                 node {
                   id
-                  createdAt
                   to {
                     ...profile
                   }
@@ -144,5 +141,5 @@ def test_user_query_friend_suggestions(setup, db, snapshot):
           name
         }
     '''
-    id = to_global_id('UserType', 4)
+    id = to_global_id(UserType.__name__, 4)
     snapshot.assert_match(client.execute(query, variable_values={'id': id}))
