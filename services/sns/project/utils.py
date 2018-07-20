@@ -9,6 +9,18 @@ from sqlalchemy.types import DateTime
 from project import db
 
 
+def format_name(name):
+    """Strip spaces and format names.
+
+    From ``  guiDO vAn    RoSSum`` to ``Guido van Rossum``.
+    """
+    try:
+        name = ' '.join(c[0] + c[1:].lower() for c in name.split())
+        return '{}{}'.format(name[0].upper(), name[1:])
+    except (AttributeError, IndexError):
+        pass
+
+
 def order_by(query, model, props):
     """
     :param props: Properties (direction and field) to order query by.
@@ -19,6 +31,13 @@ def order_by(query, model, props):
         direction = getattr(field, direction)
         return query.order_by(direction())
     return query
+
+
+# From this response in Stackoverflow
+# http://stackoverflow.com/a/19053800/1072990
+def to_camel_case(snake_case):
+    components = snake_case.split('_')
+    return components[0] + ''.join(c.capitalize() for c in components[1:])
 
 
 # From this response in Stackoverflow
