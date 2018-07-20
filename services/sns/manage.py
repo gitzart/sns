@@ -36,13 +36,14 @@ def load_db():
 @click.option('-c', '--coverage', is_flag=True)
 def test(coverage):
     rv = pytest.main([])
-    if coverage and rv == 0:
-        cov.stop()
-        cov.save()
-        print('Coverage Summary:')
-        cov.report(show_missing=True, skip_covered=True)
-        cov.html_report()
-        cov.erase()
+    if rv == 0:
+        if coverage:
+            cov.stop()
+            cov.save()
+            print('Coverage Summary:')
+            cov.report(show_missing=True, skip_covered=True)
+            cov.html_report()
+            cov.erase()
         sys.exit(0)
     sys.exit(1)
 

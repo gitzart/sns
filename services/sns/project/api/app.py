@@ -1,7 +1,7 @@
 from flask import Blueprint
 from flask_graphql import GraphQLView
 
-from .schemas.schema import schema
+from project.api.schemas import schema
 
 
 sns_blueprint = Blueprint('sns', __name__)
