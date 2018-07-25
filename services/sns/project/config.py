@@ -11,6 +11,8 @@ class BaseConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = False
     BCRYPT_LOG_ROUNDS = 4
+    JWT_ALGO = 'HS256'
+    JWT_EXP_SEC = 60 * 60
 
 
 class DevelopmentConfig(BaseConfig):

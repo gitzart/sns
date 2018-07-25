@@ -22,6 +22,7 @@ def test__CreateUser__pass(db, snapshot):
           }) {
             __typename
             ... on UserMutationSuccess {
+              token
               user {
                 id
                 name
@@ -189,3 +190,7 @@ def test__UpdateUser__fail_username_uniqueness(setup, db, snapshot):
         }
     '''
     snapshot.assert_match(client.execute(mutation, variable_values={'id': id}))
+
+
+def test__LogIn__pass(db, snapshot):
+    pass

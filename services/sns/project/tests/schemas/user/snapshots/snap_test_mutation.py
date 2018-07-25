@@ -11,6 +11,7 @@ snapshots['test__CreateUser__pass 1'] = {
     'data': {
         'createUser': {
             '__typename': 'UserMutationSuccess',
+            'token': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE1MzI1Mzk2NjksImV4cCI6MTUzMjU0MzI2OSwic3ViIjoxfQ.Yzd4eeZMspYbWIYR-PYfh1373JgbElj_SXWNqW8J_54',
             'user': {
                 'birthday': '1985-01-01',
                 'email': 'rory@русски4ever.орг',

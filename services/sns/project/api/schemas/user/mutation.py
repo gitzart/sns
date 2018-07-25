@@ -1,9 +1,11 @@
 import re
 
-from datetime import date
+from datetime import date, datetime, timedelta
 
 import graphene
+import jwt
 
+from flask import current_app
 from graphql_relay import from_global_id
 from sqlalchemy.exc import IntegrityError
 
@@ -54,11 +56,13 @@ v_user = Validator(v_schema, allow_unknown=True)
 
 class UserMutationSuccess(graphene.ObjectType):
     """Return User obj when the mutation is a success."""
+
     user = graphene.Field(
         UserType,
         required=True,
         description='The mutated user.'
     )
+    token = graphene.String(description='A new JSON web token.')
     client_mutation_id = graphene.String()
 
 
@@ -129,7 +133,20 @@ class CreateUser(graphene.relay.ClientIDMutation):
             db.session.rollback()
             return MutationError(errors={'db': e.args[0]})
 
-        return UserMutationSuccess(user=user)
+        # Issue a new JSON token
+        now = datetime.utcnow()
+        payload = {
+            'iat': now,
+            'exp': now + timedelta(seconds=current_app.config['JWT_EXP_SEC']),
+            'sub': user.id,
+        }
+        token = jwt.encode(
+            payload,
+            current_app.config['SECRET_KEY'],
+            algorithm=current_app.config['JWT_ALGO']
+        ).decode()
+
+        return UserMutationSuccess(user=user, token=token)
 
 
 # TODO: Update email and password
