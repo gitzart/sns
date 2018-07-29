@@ -1,4 +1,7 @@
 import graphene
+import jwt
+
+from flask import current_app
 
 from project import bcrypt
 from project.api.models.auth import get_new_token
@@ -49,5 +52,43 @@ class Login(graphene.relay.ClientIDMutation):
         return LoginMutationSuccess(token=get_new_token(user.id))
 
 
+class LogoutMutationSuccess(graphene.ObjectType):
+    """Return Boolean value if the user has successfully logged out."""
+
+    logged_out = graphene.Boolean()
+    client_mutation_id = graphene.String()
+
+
+class LogoutMutationPayload(graphene.Union):
+    class Meta:
+        types = (MutationError, LogoutMutationSuccess)
+
+
+class Logout(graphene.relay.ClientIDMutation):
+    Output = LogoutMutationPayload
+
+    @classmethod
+    def mutate_and_get_payload(cls, root, info, **input):
+        # Get request header
+        auth_header = info.context.get('Authorization')
+        if not auth_header:
+            return MutationError(errors={'logout': "you have not logged in"})
+
+        # Decode the token
+        try:
+            jwt.decode(
+                auth_header.split()[1],
+                current_app.config['SECRET_KEY'],
+                algorithm=current_app.config['JWT_ALGO'],
+            )
+        except jwt.ExpiredSignatureError:
+            pass
+        except jwt.InvalidTokenError:
+            return MutationError(errors={'logout': 'invalid token'})
+
+        return LogoutMutationSuccess(logged_out=True)
+
+
 class Mutation(graphene.ObjectType):
     login = Login.Field(description="Log in to the user's account.")
+    logout = Logout.Field(description="Log out of the user's account.")

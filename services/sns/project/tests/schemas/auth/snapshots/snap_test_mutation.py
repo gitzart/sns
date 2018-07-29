@@ -22,3 +22,35 @@ snapshots['test__Login__fail_incorrect_password 1'] = {
         }
     }
 }
+
+snapshots['test__Logout__pass 1'] = {
+    'data': {
+        'logout': {
+            'loggedOut': True
+        }
+    }
+}
+
+snapshots['test__Logout__pass_expired_token 1'] = {
+    'data': {
+        'logout': {
+            'loggedOut': True
+        }
+    }
+}
+
+snapshots['test__Logout__fail_invalid_token 1'] = {
+    'data': {
+        'logout': {
+            'errors': '{"logout": "invalid token"}'
+        }
+    }
+}
+
+snapshots['test__Logout__fail_no_token_included 1'] = {
+    'data': {
+        'logout': {
+            'errors': '{"logout": "you have not logged in"}'
+        }
+    }
+}

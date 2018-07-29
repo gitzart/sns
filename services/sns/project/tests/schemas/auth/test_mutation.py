@@ -5,6 +5,7 @@ from graphene import test
 
 from project import bcrypt
 from project.api.models.enums import Gender
+from project.api.models.auth import get_new_token
 from project.api.models.user import User
 from project.api.schemas import schema
 
@@ -100,4 +101,80 @@ def test__Login__fail_incorrect_password(db, snapshot):
     '''
     snapshot.assert_match(client.execute(mutation, variable_values={
         'email': email, 'password': 'incorrect' + password
+    }))
+
+
+def test__Logout__pass(db, snapshot):
+    bill_id = 4
+    token = get_new_token(bill_id)
+
+    mutation = '''
+        mutation LogoutUser {
+          logout(input: {}) {
+            ... on LogoutMutationSuccess {
+              loggedOut
+            }
+            ... on MutationError {
+              errors
+            }
+          }
+        }
+    '''
+    snapshot.assert_match(client.execute(mutation, context_value={
+        'Authorization': f'Bearer {token}'
+    }))
+
+
+def test__Logout__pass_expired_token(db, snapshot):
+    rory_id = 1
+
+    # expired token
+    current_app.config['JWT_EXP_SEC'] = 0
+    token = get_new_token(rory_id)
+    current_app.config['JWT_EXP_SEC'] = 60 * 60
+
+    mutation = '''
+        mutation LogoutUser {
+          logout(input: {}) {
+            ... on LogoutMutationSuccess {
+              loggedOut
+            }
+          }
+        }
+    '''
+    snapshot.assert_match(client.execute(mutation, context_value={
+        'Authorization': f'Bearer {token}'
+    }))
+
+
+def test__Logout__fail_invalid_token(db, snapshot):
+    song_id = 5
+    token = get_new_token(song_id)
+
+    mutation = '''
+        mutation LogoutUser {
+          logout(input: {}) {
+            ... on MutationError {
+              errors
+            }
+          }
+        }
+    '''
+    snapshot.assert_match(client.execute(mutation, context_value={
+        'Authorization': f'Bearer invalid_{token}'
+    }))
+
+
+def test__Logout__fail_no_token_included(db, snapshot):
+    mutation = '''
+        mutation LogoutUser {
+          logout(input: {}) {
+            ... on MutationError {
+              errors
+            }
+          }
+        }
+    '''
+    snapshot.assert_match(client.execute(mutation, context_value={
+        'Authorization': ''
     }))
