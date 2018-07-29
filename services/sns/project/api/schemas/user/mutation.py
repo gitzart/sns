@@ -1,15 +1,14 @@
 import re
 
-from datetime import date, datetime, timedelta
+from datetime import date
 
 import graphene
-import jwt
 
-from flask import current_app
 from graphql_relay import from_global_id
 from sqlalchemy.exc import IntegrityError
 
 from project import bcrypt, db
+from project.api.models.auth import get_new_token
 from project.api.models.user import User
 from project.api.schemas.enums import Gender, MaritalStatus
 from project.api.schemas.errors import MutationError
@@ -133,20 +132,7 @@ class CreateUser(graphene.relay.ClientIDMutation):
             db.session.rollback()
             return MutationError(errors={'db': e.args[0]})
 
-        # Issue a new JSON token
-        now = datetime.utcnow()
-        payload = {
-            'iat': now,
-            'exp': now + timedelta(seconds=current_app.config['JWT_EXP_SEC']),
-            'sub': user.id,
-        }
-        token = jwt.encode(
-            payload,
-            current_app.config['SECRET_KEY'],
-            algorithm=current_app.config['JWT_ALGO']
-        ).decode()
-
-        return UserMutationSuccess(user=user, token=token)
+        return UserMutationSuccess(user=user, token=get_new_token(user.id))
 
 
 # TODO: Update email and password
