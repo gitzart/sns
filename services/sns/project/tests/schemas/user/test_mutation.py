@@ -1,9 +1,7 @@
-import jwt
-
-from flask import current_app
 from graphene import test
 from graphql_relay import to_global_id
 
+from project.api.models.auth import verify_token
 from project.api.models.user import User
 from project.api.schemas import schema
 from project.api.schemas.user.query import UserType
@@ -44,11 +42,7 @@ def test__CreateUser__pass(db, snapshot):
     token = resp['data']['createUser'].pop('token')
     snapshot.assert_match(resp)
 
-    payload = jwt.decode(
-        token,
-        current_app.config['SECRET_KEY'],
-        current_app.config['JWT_ALGO'],
-    )
+    payload = verify_token(token)
     rory_id = 1
     assert payload['sub'] == rory_id
 

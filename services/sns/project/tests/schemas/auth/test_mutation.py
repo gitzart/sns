@@ -1,11 +1,9 @@
-import jwt
-
 from flask import current_app
 from graphene import test
 
 from project import bcrypt
 from project.api.models.enums import Gender
-from project.api.models.auth import get_new_token
+from project.api.models.auth import get_new_token, verify_token
 from project.api.models.user import User
 from project.api.schemas import schema
 
@@ -42,12 +40,8 @@ def test__Login__pass(db):
     resp = client.execute(mutation, variable_values={
         'email': email, 'password': password
     })
-    token = jwt.decode(
-        resp['data']['login']['token'],
-        current_app.config['SECRET_KEY'],
-        current_app.config['JWT_ALGO'],
-    )
-    assert token['sub'] == amy.id
+    payload = verify_token(resp['data']['login']['token'])
+    assert payload['sub'] == amy.id
 
 
 def test__Login__fail_incorrect_email(db, snapshot):

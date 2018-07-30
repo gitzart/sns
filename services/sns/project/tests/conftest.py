@@ -5,7 +5,7 @@ from project.api.models.enums import Gender
 from project.api.models.user import User
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def app(request):
     app = create_app()
     app.config.from_object('project.config.TestingConfig')

@@ -1,10 +1,7 @@
 import graphene
-import jwt
-
-from flask import current_app
 
 from project import bcrypt
-from project.api.models.auth import get_new_token
+from project.api.models.auth import get_new_token, verify_token
 from project.api.models.user import User
 from project.api.schemas.errors import MutationError
 
@@ -70,20 +67,17 @@ class Logout(graphene.relay.ClientIDMutation):
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
         # Get request header
-        auth_header = info.context.get('Authorization')
+        try:
+            auth_header = info.context.get('Authorization')
+        except AttributeError:
+            auth_header = info.context.headers.get('Authorization')
+
         if not auth_header:
             return MutationError(errors={'logout': "you have not logged in"})
 
         # Decode the token
-        try:
-            jwt.decode(
-                auth_header.split()[1],
-                current_app.config['SECRET_KEY'],
-                algorithm=current_app.config['JWT_ALGO'],
-            )
-        except jwt.ExpiredSignatureError:
-            pass
-        except jwt.InvalidTokenError:
+        payload = verify_token(auth_header.split()[1])
+        if payload == 'invalid':
             return MutationError(errors={'logout': 'invalid token'})
 
         return LogoutMutationSuccess(logged_out=True)
