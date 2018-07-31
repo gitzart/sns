@@ -47,7 +47,31 @@ snapshots['test__Logout__fail_invalid_token 1'] = {
     }
 }
 
+snapshots['test__Logout__fail_blacklist_token 1'] = {
+    'data': {
+        'logout': {
+            'loggedOut': True
+        }
+    }
+}
+
+snapshots['test__Logout__fail_blacklist_token 2'] = {
+    'data': {
+        'logout': {
+            'errors': '{"logout": "invalid token"}'
+        }
+    }
+}
+
 snapshots['test__Logout__fail_no_token_included 1'] = {
+    'data': {
+        'logout': {
+            'errors': '{"logout": "you have not logged in"}'
+        }
+    }
+}
+
+snapshots['test__Logout__fail_no_auth_header_included 1'] = {
     'data': {
         'logout': {
             'errors': '{"logout": "you have not logged in"}'

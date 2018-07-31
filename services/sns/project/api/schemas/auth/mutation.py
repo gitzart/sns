@@ -1,7 +1,10 @@
 import graphene
 
-from project import bcrypt
-from project.api.models.auth import get_new_token, verify_token
+from flask import request
+from sqlalchemy.exc import IntegrityError
+
+from project import bcrypt, db
+from project.api.models.auth import BlacklistToken, get_new_token, verify_token
 from project.api.models.user import User
 from project.api.schemas.errors import MutationError
 
@@ -67,11 +70,7 @@ class Logout(graphene.relay.ClientIDMutation):
     @classmethod
     def mutate_and_get_payload(cls, root, info, **input):
         # Get request header
-        try:
-            auth_header = info.context.get('Authorization')
-        except AttributeError:
-            auth_header = info.context.headers.get('Authorization')
-
+        auth_header = request.headers.get('Authorization')
         if not auth_header:
             return MutationError(errors={'logout': "you have not logged in"})
 
@@ -79,6 +78,16 @@ class Logout(graphene.relay.ClientIDMutation):
         payload = verify_token(auth_header.split()[1])
         if payload == 'invalid':
             return MutationError(errors={'logout': 'invalid token'})
+
+        # Blacklist the unexpired token
+        if payload != 'expired':
+            try:
+                db.session.add(
+                    BlacklistToken(id=payload['jti'], exp=payload['exp']))
+                db.session.commit()
+            except IntegrityError:
+                db.session.rollback()
+                return MutationError(errors={'logout': 'invalid token'})
 
         return LogoutMutationSuccess(logged_out=True)
 

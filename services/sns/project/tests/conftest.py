@@ -13,12 +13,6 @@ def app(request):
 
 
 @pytest.fixture
-def client(app):
-    with app.test_client() as c:
-        yield c
-
-
-@pytest.fixture
 def db(app):
     with app.app_context():
         database.create_all()

@@ -4,6 +4,9 @@ from uuid import UUID, uuid4
 import jwt
 
 from flask import current_app
+from sqlalchemy.dialects import postgresql
+
+from project import db
 
 
 def get_new_token(sub):
@@ -40,3 +43,10 @@ def verify_token(token):
         return 'invalid'
 
     return payload
+
+
+class BlacklistToken(db.Model):
+    __tablename__ = 'blacklist_tokens'
+
+    id = db.Column(postgresql.UUID(as_uuid=True), primary_key=True)
+    exp = db.Column(db.BigInteger, nullable=False)

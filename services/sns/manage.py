@@ -7,7 +7,7 @@ import pytest
 from flask.cli import FlaskGroup
 
 from project import create_app, db
-from project.api.models import *
+from project.api.models import *  # noqa
 
 
 cov = coverage.Coverage(
