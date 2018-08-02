@@ -51,20 +51,20 @@ def to_snake_case(camel_str):
 def to_gql_enum(py_enum):
     """Convert Python enumeration into GraphQL enumeration."""
 
-    def description(enum_member):
-        if enum_member is not None:
-            return enum_member.value.describe()
+    def describe(member):
+        if member is not None:
+            return member.describe()
         return py_enum.__doc__
 
-    d = {
-        '__doc__': py_enum.__doc__,
-        'description': description,
-    }
+    def deprecate(member):
+        if hasattr(member, 'deprecate'):
+            return member.deprecate()
 
-    for key, value in py_enum.__members__.items():
-        d[key] = value
-
-    return type(py_enum.__name__, (graphene.Enum,), d)
+    return graphene.Enum.from_enum(
+        py_enum,
+        description=describe,
+        deprecation_reason=deprecate,
+    )
 
 
 def to_sa_enum(py_enum):
