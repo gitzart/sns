@@ -100,6 +100,30 @@ class TestUserModel:
         assert follower_user.first_name == 'song'
         assert followed_user.first_name == 'song'
 
+    def test__get_by_id__pass(self, db):
+        amy_id = 2
+        amy = User.get_by_id(amy_id)
+        assert amy is not None
+        assert amy.first_name == 'amy'
+
+    def test__get_by_id__fail_invalid_ID_nondigit_str(self, db):
+        uid = 'invalid_ID'
+        with pytest.raises(Exception) as e:
+            User.get_by_id(uid)
+        assert 'invalid ID' in str(e.value)
+
+    def test__get_by_id__fail_invalid_ID_None_type(self, db):
+        uid = None
+        with pytest.raises(Exception) as e:
+            User.get_by_id(uid)
+        assert 'invalid ID' in str(e.value)
+
+    def test__get_by_id__fail_invalid_ID_empty_str(self, db):
+        uid = None
+        with pytest.raises(Exception) as e:
+            User.get_by_id(uid)
+        assert 'invalid ID' in str(e.value)
+
     def test_user_mutual_friends_returns_query(self, db):
         assert isinstance(User.mutual_friends(1, 2), Query)
 

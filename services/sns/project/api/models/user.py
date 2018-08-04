@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from project import db
 from project.utils import to_sa_enum, utcnow
-from .enums import FriendshipState, Gender, MaritalStatus
+from project.api.models.enums import FriendshipState, Gender, MaritalStatus
 
 
 SAFriendshipState = to_sa_enum(FriendshipState)
@@ -232,6 +232,18 @@ class User(db.Model):
             self.__class__.__name__,
             self.first_name
         )
+
+    @classmethod
+    def get_by_id(cls, id):
+        try:
+            id = int(id)
+        except (TypeError, ValueError):
+            raise Exception('invalid ID')
+
+        try:
+            return cls.query.get(id)
+        except Exception:
+            raise Exception('server error')
 
     @staticmethod
     def mutual_friends(id_1, id_2):
