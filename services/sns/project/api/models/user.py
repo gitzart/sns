@@ -239,11 +239,7 @@ class User(db.Model):
             id = int(id)
         except (TypeError, ValueError):
             raise Exception('invalid ID')
-
-        try:
-            return cls.query.get(id)
-        except Exception:
-            raise Exception('server error')
+        return cls.query.get(id)
 
     @staticmethod
     def mutual_friends(id_1, id_2):

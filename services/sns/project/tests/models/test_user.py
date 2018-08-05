@@ -106,20 +106,8 @@ class TestUserModel:
         assert amy is not None
         assert amy.first_name == 'amy'
 
-    def test__get_by_id__fail_invalid_ID_nondigit_str(self, db):
-        uid = 'invalid_ID'
-        with pytest.raises(Exception) as e:
-            User.get_by_id(uid)
-        assert 'invalid ID' in str(e.value)
-
-    def test__get_by_id__fail_invalid_ID_None_type(self, db):
-        uid = None
-        with pytest.raises(Exception) as e:
-            User.get_by_id(uid)
-        assert 'invalid ID' in str(e.value)
-
-    def test__get_by_id__fail_invalid_ID_empty_str(self, db):
-        uid = None
+    @pytest.mark.parametrize('uid', ('nondigit', None, ''))
+    def test__get_by_id__fail_invalid_ID(self, db, uid):
         with pytest.raises(Exception) as e:
             User.get_by_id(uid)
         assert 'invalid ID' in str(e.value)
