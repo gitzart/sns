@@ -4,8 +4,11 @@ import uuid
 
 import pytest
 
+from flask import g
+
 from project.api.models.auth import (
     BlacklistToken,
+    authenticate,
     full_token_check,
     get_new_token,
     verify_auth_header,
@@ -195,3 +198,30 @@ def test__full_token_check__fail_blacklist_token(app, db):
         with pytest.raises(Exception) as e:
             full_token_check()
     assert 'invalid token' in str(e.value)
+
+
+def test__authenticate__pass(setup, app, db):
+    amy_id = 2
+    token = get_new_token(amy_id)
+    payload = verify_token(token)
+
+    with app.test_request_context(headers=auth_header('bearer', token)):
+        assert authenticate() is None
+
+    assert g.is_authenticated
+    assert g.payload == payload
+    assert g.viewer.first_name == 'amy'
+
+
+def test__authenticate__fail_user_not_found(app, db):
+    rory_id = 1
+    token = get_new_token(rory_id)
+
+    with app.test_request_context(headers=auth_header('bearer', token)):
+        with pytest.raises(Exception) as e:
+            authenticate()
+
+    assert 'invalid token' in str(e.value)
+    assert not hasattr(g, 'is_authenticated')
+    assert not hasattr(g, 'payload')
+    assert not hasattr(g, 'viewer')

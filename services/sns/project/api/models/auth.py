@@ -3,10 +3,11 @@ from uuid import UUID, uuid4
 
 import jwt
 
-from flask import current_app, request
+from flask import current_app, g, request
 from sqlalchemy.dialects import postgresql
 
 from project import db
+from project.api.models.user import User
 
 
 class BlacklistToken(db.Model):
@@ -90,3 +91,38 @@ def full_token_check():
     if BlacklistToken.query.get(payload['jti']):
         raise Exception('invalid token')
     return payload
+
+
+def authenticate():
+    """Authenticate the incoming request and cache the reusable objects.
+
+    Built as a business logic layer that does not depend on
+    any API interface such as GraphQL, REST, and RPC.
+    See http://graphql.github.io/learn/thinking-in-graphs
+
+    With REST, use it inside a decorator, like so::
+
+        from functools import wraps
+
+        def login_required(f):
+            @wraps(f)
+            def decorated(*args, **kwargs):
+                authenticate()
+                return f(*args, **kwargs)
+            return decorated
+
+    :return: None if the request is authentic, or raise Exception.
+    """
+    if getattr(g, 'is_authenticated', False):
+        return None
+
+    payload = full_token_check()
+
+    viewer = User.get_by_id(payload['sub'])
+    if viewer is None:
+        raise Exception('invalid token')
+
+    # Authentication went well, cache the objects.
+    g.is_authenticated = True
+    g.payload = payload
+    g.viewer = viewer
