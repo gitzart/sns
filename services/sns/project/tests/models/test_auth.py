@@ -102,27 +102,6 @@ def test__verify_token__pass():
     assert isinstance(payload, dict)
 
 
-def test__verify_token__fail_exclude_UUID_JTI_field():
-    payload = {
-        'iat': now,
-        'exp': now + sec,
-        'sub': sub,
-    }
-    token = jwt.encode(payload, secret, algorithm=algo)
-    assert verify_token(token) == 'invalid'
-
-
-def test__verify_token__fail_non_hex_UUID_JTI_field():
-    payload = {
-        'jti': uuid.uuid4().int,
-        'iat': now,
-        'exp': now + sec,
-        'sub': sub,
-    }
-    token = jwt.encode(payload, secret, algorithm=algo)
-    assert verify_token(token) == 'invalid'
-
-
 def test__verify_token__fail_expired_token():
     payload = {
         'jti': uuid.uuid4().hex,
@@ -130,5 +109,66 @@ def test__verify_token__fail_expired_token():
         'exp': now - sec,
         'sub': sub,
     }
-    token = jwt.encode(payload, secret, algorithm=algo)
-    assert verify_token(token) == 'expired'
+    token = jwt.encode(payload, secret, algorithm=algo).decode()
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'expired token' in str(e.value)
+
+
+def test__verify_token__fail_empty_token():
+    token = ''
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token' in str(e.value)
+
+
+def test__verify_token__fail_integer_token():
+    token = 12345678910
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token' in str(e.value)
+
+
+def test__verify_token__fail_invalid_token():
+    token = f'invalid-{get_new_token(sub)}'
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token' in str(e.value)
+
+
+def test__verify_token__fail_no_uuid_jti_field():
+    payload = {
+        'iat': now,
+        'exp': now + sec,
+        'sub': sub,
+    }
+    token = jwt.encode(payload, secret, algorithm=algo).decode()
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token id' in str(e.value)
+
+
+def test__verify_token__fail_empty_uuid_jti_field():
+    payload = {
+        'jti': '',
+        'iat': now,
+        'exp': now + sec,
+        'sub': sub,
+    }
+    token = jwt.encode(payload, secret, algorithm=algo).decode()
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token id' in str(e.value)
+
+
+def test__verify_token__fail_integer_uuid_jti_field():
+    payload = {
+        'jti': uuid.uuid4().int,
+        'iat': now,
+        'exp': now + sec,
+        'sub': sub,
+    }
+    token = jwt.encode(payload, secret, algorithm=algo).decode()
+    with pytest.raises(Exception) as e:
+        verify_token(token)
+    assert 'invalid token id' in str(e.value)

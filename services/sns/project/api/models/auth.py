@@ -54,7 +54,10 @@ def verify_auth_header():
 
 
 def verify_token(token):
-    """"Decode the JWT token."""
+    """"Decode the JWT token.
+
+    :return: Token payload if the token is valid or raise Exception.
+    """
     algo = current_app.config['JWT_ALGO']
     secret = current_app.config['SECRET_KEY']
 
@@ -62,14 +65,14 @@ def verify_token(token):
     try:
         payload = jwt.decode(token, secret, algorithms=[algo])
     except jwt.ExpiredSignatureError:
-        return 'expired'
+        raise Exception('expired token')
     except jwt.InvalidTokenError:
-        return 'invalid'
+        raise Exception('invalid token')
 
     # Extended `jti` verification
     try:
         UUID(hex=payload.get('jti'))
     except Exception:
-        return 'invalid'
+        raise Exception('invalid token id')
 
     return payload
