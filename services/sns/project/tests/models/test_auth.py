@@ -5,6 +5,8 @@ import uuid
 import pytest
 
 from project.api.models.auth import (
+    BlacklistToken,
+    full_token_check,
     get_new_token,
     verify_auth_header,
     verify_token,
@@ -172,3 +174,24 @@ def test__verify_token__fail_integer_uuid_jti_field():
     with pytest.raises(Exception) as e:
         verify_token(token)
     assert 'invalid token id' in str(e.value)
+
+
+def test__full_token_check__pass(app, db):
+    token = get_new_token(sub)
+    with app.test_request_context(headers=auth_header('bearer', token)):
+        payload = full_token_check()
+    assert isinstance(payload, dict)
+
+
+def test__full_token_check__fail_blacklist_token(app, db):
+    token = get_new_token(sub)
+    payload = verify_token(token)
+
+    # Blacklist the token
+    db.session.add(BlacklistToken(id=payload['jti'], exp=payload['exp']))
+    db.session.commit()
+
+    with app.test_request_context(headers=auth_header('bearer', token)):
+        with pytest.raises(Exception) as e:
+            full_token_check()
+    assert 'invalid token' in str(e.value)

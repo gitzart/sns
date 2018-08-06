@@ -76,3 +76,17 @@ def verify_token(token):
         raise Exception('invalid token id')
 
     return payload
+
+
+def full_token_check():
+    """Make a full verification of the token.
+
+    :return: Token payload if the token is valid or raise Exception.
+    """
+    token = verify_auth_header()
+    payload = verify_token(token)
+
+    # Blacklist check
+    if BlacklistToken.query.get(payload['jti']):
+        raise Exception('invalid token')
+    return payload
