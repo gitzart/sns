@@ -8,12 +8,14 @@ from flask import g
 
 from project.api.models.auth import (
     BlacklistToken,
+    authenticate_password,
     authenticate_token,
     full_token_check,
     get_new_token,
     verify_auth_header,
     verify_token,
 )
+from project.api.models.user import User
 from project.config import TestingConfig
 
 
@@ -235,3 +237,31 @@ def test__authenticate_token__fail_user_not_found(app, db):
     assert not hasattr(g, 'is_authenticated')
     assert not hasattr(g, 'payload')
     assert not hasattr(g, 'viewer')
+
+
+def test__authenticate_password__pass(setup, db):
+    doctor = User.get_by_id(3)
+    token = authenticate_password(doctor.email, 'my_precious')
+    assert isinstance(token, str)
+
+
+@pytest.mark.parametrize('email', ['', '   ', 'incorrect@email'])
+def test__authenticate_password__fail_invalid_email(db, email):
+    with pytest.raises(Exception) as e:
+        authenticate_password(email, 'my_precious')
+    assert 'incorrect credentials' in str(e.value)
+
+
+@pytest.mark.parametrize('password', ['', '   ', 'incorrect password'])
+def test__authenticate_password__fail_invalid_password(setup, db, password):
+    bill = User.get_by_id(4)
+    with pytest.raises(Exception) as e:
+        authenticate_password(bill.email, password)
+    assert 'incorrect credentials' in str(e.value)
+
+
+def test__authenticate_password__fail_invalid_credentials(setup, db):
+    song = User.get_by_id(5)
+    with pytest.raises(Exception) as e:
+        authenticate_password('incorrect' + song.email, 'incorrect password')
+    assert 'incorrect credentials' in str(e.value)

@@ -6,7 +6,7 @@ import jwt
 from flask import current_app, g, request
 from sqlalchemy.dialects import postgresql
 
-from project import db
+from project import bcrypt, db
 from project.api.models.user import User
 
 
@@ -91,6 +91,22 @@ def full_token_check():
     if BlacklistToken.query.get(payload['jti']):
         raise Exception('invalid token')
     return payload
+
+
+def authenticate_password(email, password):
+    """Password based authentication.
+
+    :return: A new token if the given credentials are authentic,
+        or raise Exception.
+    """
+    if not email.strip():
+        raise Exception('incorrect credentials')
+
+    user = User.query.filter_by(email=email).first()
+    if not (user and bcrypt.check_password_hash(user.password, password)):
+        raise Exception('incorrect credentials')
+
+    return get_new_token(user.id)
 
 
 def authenticate_token():
