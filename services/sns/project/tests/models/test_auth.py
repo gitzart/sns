@@ -30,14 +30,6 @@ algo = TestingConfig.JWT_ALGO
 sec = TestingConfig.JWT_EXP_SEC
 secret = TestingConfig.SECRET_KEY
 sub = 10
-
-
-@pytest.fixture(scope='module')
-def app_context(app):
-    with app.app_context():
-        yield
-
-
 pytestmark = pytest.mark.usefixtures('app_context')
 
 
@@ -55,6 +47,7 @@ def auth_header(type_, token=None):
 def test__get_new_token__return_string_type():
     token = get_new_token(sub)
     assert isinstance(token, str)
+    assert verify_token(token)['sub'] == sub
 
 
 def test__get_new_token__include_UUID_JTI_field():

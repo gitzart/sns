@@ -12,6 +12,12 @@ def app(request):
     return app
 
 
+@pytest.fixture(scope='module')
+def app_context(app):
+    with app.app_context():
+        yield
+
+
 @pytest.fixture
 def db(app):
     with app.app_context():
