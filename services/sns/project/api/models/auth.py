@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from uuid import UUID, uuid4
 
 import jwt
+import sqlalchemy as sa
 
 from flask import current_app, g, request
 from sqlalchemy.dialects import postgresql
@@ -144,3 +145,40 @@ def authenticate_token():
     g.is_authenticated = True
     g.payload = payload
     g.viewer = viewer
+
+
+def logout():
+    """Invalidate the token.
+
+    :return: True if the invalidation goes well, or raise Exception.
+
+    .. warning::
+
+        Since this is a security related function, it must sit behind
+        the authentication layer. In other words, :meth:`.authenticate_token`
+        must be invoked first for this function to work properly.
+
+        E.g.::
+
+            try:
+                authenticate_token()
+            except Exception as e:
+                raise e
+            else:
+                logout()
+
+    """
+    payload = getattr(g, 'payload', {})
+    if not payload:
+        raise Exception('login required')
+
+    bl_token = BlacklistToken(id=payload['jti'], exp=payload['exp'])
+
+    try:
+        db.session.add(bl_token)
+        db.session.commit()
+    except sa.exc.IntegrityError:
+        db.session.rollback()
+        raise Exception('server error')
+
+    return True

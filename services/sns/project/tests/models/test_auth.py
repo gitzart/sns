@@ -12,6 +12,7 @@ from project.api.models.auth import (
     authenticate_token,
     full_token_check,
     get_new_token,
+    logout,
     verify_auth_header,
     verify_token,
 )
@@ -265,3 +266,18 @@ def test__authenticate_password__fail_invalid_credentials(setup, db):
     with pytest.raises(Exception) as e:
         authenticate_password('incorrect' + song.email, 'incorrect password')
     assert 'incorrect credentials' in str(e.value)
+
+
+def test__logout__pass(db):
+    rory_id = 1
+    token = get_new_token(rory_id)
+    g.payload = verify_token(token)
+    assert logout()
+    assert BlacklistToken.query.get(g.payload['jti']) is not None
+
+
+def test__logout__fail_login_required():
+    g.is_authenticated = True
+    with pytest.raises(Exception) as e:
+        logout()
+    assert 'login required' in str(e.value)
