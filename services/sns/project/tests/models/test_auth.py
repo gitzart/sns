@@ -8,7 +8,7 @@ from flask import g
 
 from project.api.models.auth import (
     BlacklistToken,
-    authenticate,
+    authenticate_token,
     full_token_check,
     get_new_token,
     verify_auth_header,
@@ -200,26 +200,36 @@ def test__full_token_check__fail_blacklist_token(app, db):
     assert 'invalid token' in str(e.value)
 
 
-def test__authenticate__pass(setup, app, db):
+def test__authenticate_token__pass(setup, app, db):
     amy_id = 2
     token = get_new_token(amy_id)
     payload = verify_token(token)
 
     with app.test_request_context(headers=auth_header('bearer', token)):
-        assert authenticate() is None
+        assert authenticate_token() is None
 
     assert g.is_authenticated
     assert g.payload == payload
     assert g.viewer.first_name == 'amy'
 
 
-def test__authenticate__fail_user_not_found(app, db):
+def test__authenticate_token__pass_aleady_authenticated(app, db):
+    g.is_authenticated = True
+
+    with app.test_request_context():
+        assert authenticate_token() is None
+
+    assert not hasattr(g, 'payload')
+    assert not hasattr(g, 'viewer')
+
+
+def test__authenticate_token__fail_user_not_found(app, db):
     rory_id = 1
     token = get_new_token(rory_id)
 
     with app.test_request_context(headers=auth_header('bearer', token)):
         with pytest.raises(Exception) as e:
-            authenticate()
+            authenticate_token()
 
     assert 'invalid token' in str(e.value)
     assert not hasattr(g, 'is_authenticated')

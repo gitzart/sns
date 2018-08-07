@@ -93,8 +93,10 @@ def full_token_check():
     return payload
 
 
-def authenticate():
-    """Authenticate the incoming request and cache the reusable objects.
+def authenticate_token():
+    """Token based authentication.
+
+    Authenticate the incoming request and cache the reusable objects.
 
     Built as a business logic layer that does not depend on
     any API interface such as GraphQL, REST, and RPC.
@@ -107,7 +109,7 @@ def authenticate():
         def login_required(f):
             @wraps(f)
             def decorated(*args, **kwargs):
-                authenticate()
+                authenticate_token()
                 return f(*args, **kwargs)
             return decorated
 
